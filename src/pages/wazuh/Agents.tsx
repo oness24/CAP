@@ -43,7 +43,7 @@ export default function Agents() {
   const offlineCount = items.filter(a => a.status !== 'active').length
 
   return (
-    <PageLayout title="Agent Management" subtitle="SIEM — Wazuh CAP agent enrollment, health and status">
+    <PageLayout title="Agent Management" subtitle="SIEM — agent enrollment, health and status">
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[

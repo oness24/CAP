@@ -21,7 +21,7 @@ const POLICY_DEFS = [
 ]
 
 export default function Policies() {
-  const { data: dash } = useDashboard("crowdstrike")
+  const { data: dash, isLoading, error } = useDashboard("crowdstrike")
   const d = (dash as typeof crowdstrikeDashboard) ?? crowdstrikeDashboard
 
   const coveragePct    = d.kpis.protectionCoverage?.value ?? "98.6%"
@@ -29,6 +29,25 @@ export default function Policies() {
 
   return (
     <PageLayout title="Policies" subtitle="CrowdStrike — Prevention and detection policy management">
+      {isLoading && (
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+          <div className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }} />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Loading live data…</span>
+        </div>
+      )}
+      {error && !isLoading && (
+        <div className="rounded-lg px-4 py-2 text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}>
+          ⚠ Failed to fetch live data — showing fallback. {error}
+        </div>
+      )}
+      <div className="rounded-lg px-4 py-2.5 text-xs flex items-start gap-3"
+        style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
+        <Settings size={14} style={{ color: '#EAB308', flexShrink: 0, marginTop: 1 }} />
+        <span style={{ color: 'var(--text-muted)' }}>
+          <strong style={{ color: 'var(--text-secondary)' }}>Reference data:</strong> Policy list reflects the recommended CrowdStrike configuration.
+          Live policy sync requires the <strong>Prevention Policies: Read</strong> API scope.
+        </span>
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard title="Active Policies" value={activePolicies}      trend={0} icon={Shield} />
         <MetricCard title="Coverage"        value={String(coveragePct)} trend={d.kpis.protectionCoverage?.trend ?? 0} icon={CheckCircle} />

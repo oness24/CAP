@@ -247,7 +247,7 @@ export default function Reports() {
   const coverage = String(d.kpis.protectionCoverage?.value ?? '98,6%').replace('.', ',')
 
   const weeklyNarrative =
-    `Esta semana, o Club Paulistano manteve uma proteção robusta dos endpoints em ${totalEndpoints} ativos geridos, ` +
+    `Esta semana, o CAP manteve uma proteção robusta dos endpoints em ${totalEndpoints} ativos geridos, ` +
     `com o desempenho de resposta a deteções a operar dentro dos parâmetros de SLA estabelecidos pela Contego Security. ` +
     `A equipa SOC registou ${activeDetections} deteções ativas e resolveu com sucesso ${resolvedIncidents} incidentes escalados` +
     (openFromRows > 0 ? `, com ${openFromRows} ainda em investigação ativa` : '') + `, ` +
@@ -257,7 +257,7 @@ export default function Reports() {
 
   const periodNarrative = period === 'semanal'
     ? weeklyNarrative
-    : `No período de relatório ${tab.label.toLowerCase()} (${periodRange}), o Club Paulistano registou ` +
+    : `No período de relatório ${tab.label.toLowerCase()} (${periodRange}), o CAP registou ` +
       `${(resolvedIncidents * mult).toLocaleString('pt-PT')} incidentes resolvidos` +
       (openFromRows * mult > 0 ? ` e ${(openFromRows * mult).toLocaleString('pt-PT')} em investigação` : '') +
       ` pela equipa SOC da Contego Security. A frota de ${totalEndpoints} endpoints geridos manteve uma cobertura de proteção de ` +
@@ -274,7 +274,7 @@ export default function Reports() {
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Relatório Executivo CrowdStrike — Club Paulistano — ${tab.label} — ${periodRange}`,
+    documentTitle: `Relatório Executivo CrowdStrike — CAP — ${tab.label} — ${periodRange}`,
     pageStyle: `
       @page { size: A4; margin: 0; }
       @media print {
@@ -293,7 +293,7 @@ export default function Reports() {
     try {
       const text = await generateSecurityNarrative({
         platform:          'CrowdStrike Falcon EDR',
-        client:            'Club Paulistano',
+        client:            'CAP',
         period:            tab.label,
         periodRange,
         totalEndpoints:    d.kpis.totalEndpoints.value,
@@ -325,7 +325,7 @@ export default function Reports() {
     try {
       const recs = await generateStrategicRecommendations({
         platform:          'CrowdStrike Falcon EDR',
-        client:            'Club Paulistano',
+        client:            'CAP',
         period:            tab.label,
         resolvedIncidents: resolvedIncidents * mult,
         openIncidents:     openFromRows,
@@ -396,7 +396,7 @@ export default function Reports() {
                   </span>
                 </div>
                 <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                  CrowdStrike Falcon EDR · Club Paulistano
+                  CrowdStrike Falcon EDR · CAP
                 </h1>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   Relatório {tab.label} · {periodRange} · Preparado em {reportDate} · Contego Security

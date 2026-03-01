@@ -42,7 +42,8 @@ export function PlatformSwitcher({ collapsed }: Props) {
             className="w-full flex items-center justify-center rounded-lg transition-all duration-150"
             style={({ isActive }) => ({
               padding: '8px',
-              background: isActive ? 'rgba(168,85,247,0.14)' : 'transparent',
+              background: isActive ? 'rgba(168,85,247,0.16)' : 'transparent',
+              border: isActive ? '1px solid rgba(192,132,252,0.35)' : '1px solid transparent',
             })}
           >
             {({ isActive }) => (
@@ -56,8 +57,9 @@ export function PlatformSwitcher({ collapsed }: Props) {
           className="w-full flex items-center gap-3 rounded-lg transition-all duration-150"
           style={({ isActive }) => ({
             padding: '8px 10px',
-            background: isActive ? 'rgba(168,85,247,0.14)' : 'transparent',
+            background: isActive ? 'rgba(168,85,247,0.16)' : 'transparent',
             borderLeft: isActive ? '3px solid #A855F7' : '3px solid transparent',
+            border: isActive ? '1px solid rgba(192,132,252,0.3)' : '1px solid transparent',
           })}
           onMouseEnter={(e) => {
             const isActive = (e.currentTarget as HTMLElement).getAttribute('aria-current') === 'page'
@@ -112,12 +114,22 @@ export function PlatformSwitcher({ collapsed }: Props) {
               borderLeft: collapsed ? 'none' : isActive
                 ? `3px solid ${platform.colors.primary}`
                 : '3px solid transparent',
+              border: isActive ? `1px solid ${platform.colors.primary}44` : '1px solid transparent',
+              boxShadow: isActive ? 'var(--shadow-soft)' : 'none',
             }}
             onMouseEnter={(e) => {
-              if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--bg-overlay)'
+              if (!isActive) {
+                const el = e.currentTarget as HTMLElement
+                el.style.background = 'rgba(255,255,255,0.03)'
+                el.style.borderColor = 'var(--border-subtle)'
+              }
             }}
             onMouseLeave={(e) => {
-              if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'
+              if (!isActive) {
+                const el = e.currentTarget as HTMLElement
+                el.style.background = 'transparent'
+                el.style.borderColor = 'transparent'
+              }
             }}
           >
             <span

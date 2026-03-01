@@ -26,18 +26,18 @@ export function MetricCard({ title, value, trend, icon: Icon, accentGlow = true,
         className
       )}
       style={{
-        background: 'linear-gradient(145deg, var(--bg-elevated) 0%, var(--bg-overlay) 100%)',
+        background: 'linear-gradient(145deg, var(--bg-elevated) 0%, var(--bg-overlay) 120%)',
         border: '1px solid var(--border-default)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        boxShadow: 'var(--shadow-soft)',
       }}
       onMouseEnter={(e) => {
         if (accentGlow) {
-          (e.currentTarget as HTMLElement).style.boxShadow = '0 0 0 1px var(--accent-primary), 0 4px 32px var(--accent-glow), 0 4px 20px rgba(0,0,0,0.3)'
+          (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-accent)'
           ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-primary)'
         }
       }}
       onMouseLeave={(e) => {
-        ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)'
+        ;(e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-soft)'
         ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'
       }}
     >
@@ -55,8 +55,8 @@ export function MetricCard({ title, value, trend, icon: Icon, accentGlow = true,
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{
-              background: 'rgba(99,155,230,0.12)',
-              border: '1px solid rgba(99,155,230,0.18)',
+              background: 'var(--accent-soft)',
+              border: '1px solid var(--border-default)',
             }}
           >
             <Icon size={15} style={{ color: 'var(--accent-secondary)' }} />

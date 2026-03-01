@@ -5,36 +5,56 @@
 :root {
   /* Default accent — CrowdStrike Blue (overridden per platform by useAccentColor) */
   --accent-primary: #3B82F6;
-  --accent-secondary: #60A5FA;
-  --accent-glow: rgba(59, 130, 246, 0.3);
+  --accent-secondary: #93C5FD;
+  --accent-glow: rgba(59, 130, 246, 0.34);
+  --accent-soft: rgba(59, 130, 246, 0.14);
   --accent-gradient: linear-gradient(135deg, #1D6AE5 0%, #3B82F6 100%);
 
-  /* ── Deep Navy Theme ────────────────────────────────────── */
-  --bg-base:     #060C1A;   /* darkest navy base            */
-  --bg-surface:  #091525;   /* sidebar / topbar             */
-  --bg-elevated: #0D1E38;   /* cards, panels                */
-  --bg-overlay:  #122240;   /* hover / dropdown states      */
+  /* ── Deep Navy Theme (live + clearer) ───────────────────── */
+  --bg-base:     #050D1E;
+  --bg-surface:  #0A1830;
+  --bg-elevated: #112544;
+  --bg-overlay:  #17345E;
 
-  /* Text — bright & blue-tinted */
-  --text-primary:   #EDF5FF;
-  --text-secondary: #7BB3E0;
-  --text-muted:     #4A7CAF;
+  /* Text — higher contrast for readability */
+  --text-primary:   #F4F8FF;
+  --text-secondary: #C8DCF6;
+  --text-muted:     #90B1D8;
 
-  /* Borders — visible with blue tint */
-  --border-subtle:  rgba(99, 155, 230, 0.12);
-  --border-default: rgba(99, 155, 230, 0.22);
-  --border-strong:  rgba(99, 155, 230, 0.38);
+  /* Borders — clearer separation */
+  --border-subtle:  rgba(148, 189, 243, 0.16);
+  --border-default: rgba(148, 189, 243, 0.26);
+  --border-strong:  rgba(148, 189, 243, 0.44);
+
+  /* Shadows */
+  --shadow-soft: 0 4px 18px rgba(2, 8, 23, 0.34);
+  --shadow-medium: 0 8px 26px rgba(2, 8, 23, 0.44);
+  --shadow-accent: 0 0 0 1px var(--accent-primary), 0 8px 28px var(--accent-glow);
+  --panel-glass: linear-gradient(160deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
 
   /* Status */
-  --status-critical: #F87171;
-  --status-high:     #FB923C;
-  --status-medium:   #FBBF24;
+  --status-critical: #FF6B6B;
+  --status-high:     #FF9F43;
+  --status-medium:   #F6C445;
   --status-low:      #34D399;
   --status-info:     #60A5FA;
 }
 
 * {
   box-sizing: border-box;
+}
+
+* {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 140ms;
+  transition-timing-function: ease-out;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 html, body {
@@ -55,14 +75,26 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(29, 106, 229, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 85% 100%, rgba(124, 58, 237, 0.07) 0%, transparent 55%);
+    radial-gradient(ellipse 70% 54% at 12% 0%, rgba(59, 130, 246, 0.16) 0%, transparent 62%),
+    radial-gradient(ellipse 46% 36% at 86% 100%, rgba(124, 58, 237, 0.1) 0%, transparent 58%);
 }
 
 /* Everything sits above the ambient glow */
 #root {
   position: relative;
   z-index: 1;
+}
+
+.surface-panel {
+  background: var(--panel-glass), var(--bg-surface);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-soft);
+}
+
+.surface-elevated {
+  background: var(--panel-glass), var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-soft);
 }
 
 /* Thin top accent line */
@@ -74,27 +106,32 @@ body::before {
   right: 0;
   height: 2px;
   z-index: 9999;
-  background: linear-gradient(90deg, #7B1D1D 0%, #1D4ED8 50%, #7C3AED 100%);
+  background: linear-gradient(90deg, var(--status-critical) 0%, var(--accent-primary) 45%, var(--accent-secondary) 100%);
   pointer-events: none;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text-primary);
 }
 
 /* ── Scrollbar ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--bg-surface); }
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 155, 230, 0.25);
+  background: rgba(148, 189, 243, 0.32);
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(99, 155, 230, 0.45); }
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 189, 243, 0.52); }
 
 /* ── Recharts ────────────────────────────────────────────── */
 .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: rgba(7, 14, 29, 0.95) !important;
+  background: rgba(8, 17, 36, 0.96) !important;
   border: 1px solid var(--border-default) !important;
   border-radius: 10px !important;
   color: var(--text-primary) !important;
   backdrop-filter: blur(12px) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border-subtle) !important;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border-subtle) !important;
 }
 
 .recharts-active-dot circle {

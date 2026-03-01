@@ -164,7 +164,7 @@ function FindingModal({ finding, onClose }: { finding: Finding; onClose: () => v
 
 export default function Vulnerabilities() {
   const [selected, setSelected] = useState<Finding | null>(null)
-  const { data: dash } = useDashboard('crowdstrike')
+  const { data: dash, isLoading, error } = useDashboard('crowdstrike')
   const d = (dash as typeof crowdstrikeDashboard) ?? crowdstrikeDashboard
 
   const sevMap: Record<string, number> = {}
@@ -200,6 +200,17 @@ export default function Vulnerabilities() {
   return (
     <PageLayout title="Vulnerabilities" subtitle="CrowdStrike — Endpoint risk posture from observed techniques">
       {selected && <FindingModal finding={selected} onClose={() => setSelected(null)} />}
+      {isLoading && (
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+          <div className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }} />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Loading live data…</span>
+        </div>
+      )}
+      {error && !isLoading && (
+        <div className="rounded-lg px-4 py-2 text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}>
+          ⚠ Failed to fetch live data — showing fallback. {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard title="Risk Score" value={riskScore + '/100'}           trend={0} icon={ShieldAlert} />

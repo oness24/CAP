@@ -46,10 +46,10 @@ export function DataTable<T extends object>({ columns, data, pageSize = 8, onRow
 
   return (
     <div className="flex flex-col gap-0">
-      <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}>
+      <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)', boxShadow: 'var(--shadow-soft)' }}>
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <tr style={{ borderBottom: '1px solid var(--border-default)', background: 'rgba(255,255,255,0.02)' }}>
               {columns.map((col) => (
                 <th
                   key={String(col.key)}
@@ -81,7 +81,7 @@ export function DataTable<T extends object>({ columns, data, pageSize = 8, onRow
                 key={ri}
                 className={clsx('transition-colors', onRowClick && 'cursor-pointer')}
                 style={{ borderBottom: ri < paginated.length - 1 ? '1px solid var(--border-subtle)' : undefined }}
-                onMouseEnter={(e) => { if (onRowClick) (e.currentTarget as HTMLElement).style.background = 'var(--bg-overlay)' }}
+                onMouseEnter={(e) => { if (onRowClick) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)' }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = '' }}
                 onClick={() => onRowClick?.(row)}
               >

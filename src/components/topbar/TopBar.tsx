@@ -21,7 +21,7 @@ export function TopBar() {
       style={{
         background: 'var(--bg-surface)',
         borderBottom: '1px solid var(--border-default)',
-        boxShadow: '0 1px 0 var(--border-subtle), 0 4px 20px rgba(0,0,0,0.3)',
+        boxShadow: '0 1px 0 var(--border-subtle), var(--shadow-soft)',
       }}
     >
       {/* Brand — left */}
@@ -65,11 +65,13 @@ export function TopBar() {
             const el = e.currentTarget as HTMLElement
             el.style.background = 'var(--bg-overlay)'
             el.style.color = 'var(--text-primary)'
+            el.style.boxShadow = 'var(--shadow-soft)'
           }}
           onMouseLeave={(e) => {
             const el = e.currentTarget as HTMLElement
             el.style.background = ''
             el.style.color = 'var(--text-muted)'
+            el.style.boxShadow = ''
           }}
         >
           <Bell size={17} />
@@ -92,11 +94,13 @@ export function TopBar() {
             const el = e.currentTarget as HTMLElement
             el.style.background = 'var(--bg-overlay)'
             el.style.borderColor = 'var(--border-strong)'
+            el.style.boxShadow = 'var(--shadow-soft)'
           }}
           onMouseLeave={(e) => {
             const el = e.currentTarget as HTMLElement
             el.style.background = ''
             el.style.borderColor = 'var(--border-default)'
+            el.style.boxShadow = ''
           }}
         >
           {/* Avatar */}

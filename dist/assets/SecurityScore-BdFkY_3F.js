@@ -1,1 +1,0 @@
-import{j as r}from"./index-DjEYCs5j.js";import{C as t}from"./ComingSoon-CLb2TXb3.js";import"./PageLayout-BEuj7YZQ.js";function a(){return r.jsx(t,{title:"Security Score",subtitle:"Keeper - Organizational password health breakdown"})}export{a as default};

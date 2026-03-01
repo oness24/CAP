@@ -1,9 +1,11 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { Printer, TrendingUp, TrendingDown, Minus, ChevronLeft, ChevronRight, X, Download, Shield } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useReactToPrint } from 'react-to-print'
 import { usePlatform } from '@/hooks/usePlatform'
 import { getWeeklyReport, getWeekRange, getRatingStyle, type WeeklyMetric, type RiskRating } from '@/data/executive/weeklyReports'
+import { useDashboard } from '@/hooks/useDashboard'
+import { generateSecurityNarrative } from '@/lib/openai'
 import { PrintReport } from './PrintReport'
 
 // ── Metric chip ───────────────────────────────────────────────────────────────
@@ -175,11 +177,164 @@ export function ExecutiveSummary() {
   const { activePlatform, config } = usePlatform()
   const [weeksBack, setWeeksBack] = useState(0)
   const [printOpen, setPrintOpen] = useState(false)
+  const [aiNarrative, setAiNarrative] = useState<string | null>(null)
+  const [aiHeadline, setAiHeadline] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null!)
+  const { data: liveDashboard } = useDashboard(activePlatform)
 
-  const report = getWeeklyReport(activePlatform)
+  const staticReport = getWeeklyReport(activePlatform)
   const week = getWeekRange(weeksBack)
   const color = config.colors.primary
+
+  const liveReport = useMemo(() => {
+    if (activePlatform !== 'wazuh' || !liveDashboard) return null
+
+    const d = liveDashboard as Record<string, unknown>
+    const kpis = (d.kpis as Record<string, { value?: string | number }> | undefined) ?? {}
+    const recentAlerts = (d.recentAlerts as Array<Record<string, unknown>> | undefined) ?? []
+    const severity24h = (d.severityBreakdown24h as Array<{ severity: string; count: number }> | undefined) ?? []
+    const agentSummary = (d.agentSummary as { total?: number; active?: number } | undefined) ?? {}
+
+    const totalAgents = Number(agentSummary.total ?? 0)
+    const activeAgents = Number(agentSummary.active ?? 0)
+    const coverage = totalAgents > 0 ? `${((activeAgents / totalAgents) * 100).toFixed(1)}%` : 'N/A'
+
+    const criticalHigh = severity24h
+      .filter((item) => item.severity === 'Critical' || item.severity === 'High')
+      .reduce((sum, item) => sum + Number(item.count ?? 0), 0)
+
+    const alerts24hRaw = (d.alertVolume as Record<string, number> | undefined)?.['24h']
+    const alerts24h = Number(alerts24hRaw ?? 0)
+    const criticalRatio = alerts24h > 0 ? criticalHigh / alerts24h : 0
+
+    const riskRating: RiskRating =
+      criticalRatio >= 0.15 ? 'Critical' :
+      criticalRatio >= 0.08 ? 'Elevated' :
+      criticalRatio >= 0.03 ? 'Moderate' :
+      'Stable'
+
+    const incidents = recentAlerts.slice(0, 6).map((alert, index) => ({
+      ref: String(alert.rule ?? `SIEM-${index + 1}`),
+      date: week.label,
+      category: String(alert.groups ?? 'SIEM Alert'),
+      description: String(alert.description ?? 'Alerta de segurança'),
+      severity: String(alert.level ?? 'Medium'),
+      status: 'Monitoring',
+      owner: 'SOC Operations',
+    }))
+
+    const metrics: WeeklyMetric[] = [
+      {
+        label: String((kpis.activeAlerts?.value ? 'Security Alerts' : 'Security Alerts')),
+        value: String(kpis.activeAlerts?.value ?? '0'),
+        delta: 'live data',
+        direction: 'flat',
+        positive: true,
+      },
+      {
+        label: 'Critical Events',
+        value: String(kpis.criticalEvents?.value ?? '0'),
+        delta: `${criticalHigh.toLocaleString()} critical/high (24h)`,
+        direction: 'flat',
+        positive: true,
+      },
+      {
+        label: 'PCI-DSS Compliance',
+        value: String((kpis.complianceScore?.value as string | number | undefined) ?? 'N/A'),
+        delta: 'framework alignment',
+        direction: 'flat',
+        positive: true,
+      },
+      {
+        label: 'Agents Online',
+        value: String(kpis.agentsOnline?.value ?? `${activeAgents}/${totalAgents}`),
+        delta: `${coverage} of fleet`,
+        direction: 'flat',
+        positive: true,
+      },
+    ]
+
+    const fallbackNarrative =
+      `A plataforma SIEM processou ${alerts24h.toLocaleString()} alertas nas últimas 24 horas, com ${criticalHigh.toLocaleString()} eventos críticos/altos e cobertura de agentes em ${coverage}. ` +
+      `A classificação de risco atual é ${riskRating}, baseada na concentração de alertas de alta severidade e no estado de cobertura operacional. ` +
+      `A recomendação imediata é priorizar as regras e agentes com maior recorrência de alertas para reduzir ruído e acelerar resposta.`
+
+    return {
+      ...staticReport,
+      platformLabel: 'SIEM · Security Information & Event Management',
+      riskRating,
+      headline: aiHeadline ?? `SIEM risk posture this week: ${riskRating} with live operational telemetry.`,
+      narrative: aiNarrative ?? fallbackNarrative,
+      metrics,
+      incidentRows: incidents,
+      preparedBy: 'SOC Operations — SIEM Team',
+      reviewedBy: 'Chief Information Security Officer',
+    }
+  }, [activePlatform, liveDashboard, staticReport, week.label, aiHeadline, aiNarrative])
+
+  const report = liveReport ?? staticReport
+
+  useEffect(() => {
+    if (activePlatform !== 'wazuh' || !liveDashboard) {
+      setAiNarrative(null)
+      setAiHeadline(null)
+      return
+    }
+
+    const d = liveDashboard as Record<string, unknown>
+    const severity24h = (d.severityBreakdown24h as Array<{ severity: string; count: number }> | undefined) ?? []
+    const agentsByOS = (d.agentsByOS as Array<{ os: string; count: number }> | undefined) ?? []
+    const agentSummary = (d.agentSummary as { total?: number; active?: number } | undefined) ?? {}
+    const alerts24hRaw = (d.alertVolume as Record<string, number> | undefined)?.['24h']
+    const alerts24h = Number(alerts24hRaw ?? 0)
+    const totalAgents = Number(agentSummary.total ?? 0)
+    const activeAgents = Number(agentSummary.active ?? 0)
+    const coverage = totalAgents > 0 ? `${((activeAgents / totalAgents) * 100).toFixed(1)}%` : 'N/A'
+    const criticalAlerts = severity24h
+      .filter((item) => item.severity === 'Critical' || item.severity === 'High')
+      .reduce((sum, item) => sum + Number(item.count ?? 0), 0)
+
+    const incidents = ((d.recentAlerts as Array<Record<string, unknown>> | undefined) ?? []).slice(0, 8).map((alert, index) => ({
+      ref: String(alert.rule ?? `SIEM-${index + 1}`),
+      category: String(alert.groups ?? 'SIEM Alert'),
+      description: String(alert.description ?? 'Alerta de segurança'),
+      severity: String(alert.level ?? 'Medium'),
+      status: 'Monitoring',
+    }))
+
+    let cancelled = false
+
+    generateSecurityNarrative({
+      platform: 'SIEM',
+      client: 'CAP',
+      period: 'Weekly',
+      periodRange: week.label,
+      totalEndpoints: totalAgents,
+      activeDetections: alerts24h,
+      resolvedIncidents: 0,
+      openIncidents: incidents.length,
+      mttr: 'N/A',
+      coverage,
+      criticalAlerts,
+      riskRating: criticalAlerts > 0 ? 'Moderate' : 'Stable',
+      severityBreakdown: severity24h.map((item) => ({ name: item.severity, value: item.count })),
+      endpointsByOS: agentsByOS,
+      incidents,
+    })
+      .then((text) => {
+        if (cancelled) return
+        setAiNarrative(text)
+        const headline = text.split('.').map((line) => line.trim()).find(Boolean)
+        setAiHeadline(headline ? `${headline}.` : null)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setAiNarrative(null)
+        setAiHeadline(null)
+      })
+
+    return () => { cancelled = true }
+  }, [activePlatform, liveDashboard, week.label])
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,

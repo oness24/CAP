@@ -24,7 +24,9 @@ export function NavItem({ item, collapsed }: Props) {
       className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150"
       style={({ isActive }) => ({
         color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-        background: isActive ? 'rgba(29,106,229,0.18)' : 'transparent',
+        background: isActive ? 'var(--accent-soft)' : 'transparent',
+        border: isActive ? '1px solid var(--border-strong)' : '1px solid transparent',
+        boxShadow: isActive ? 'var(--shadow-soft)' : 'none',
       })}
     >
       {({ isActive }) => (

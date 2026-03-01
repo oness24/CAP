@@ -89,13 +89,13 @@ export const PrintReport = forwardRef<HTMLDivElement, Props>(function PrintRepor
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           {/* Esquerda: Identidade Visual */}
           <div>
-            {/* Contego Security + Club Paulistano */}
+            {/* Contego Security + CAP */}
             <div style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '13px', fontWeight: 800, color: config.colors.primary, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '2px' }}>
                 Contego Security
               </div>
               <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>
-                Serviços de Segurança Gerida · Club Paulistano
+                Serviços de Segurança Gerida · CAP
               </div>
             </div>
 

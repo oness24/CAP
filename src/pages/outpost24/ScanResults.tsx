@@ -26,7 +26,7 @@ function statusColor(s: string): string {
 type ScanRow = typeof outpost24Dashboard.scans[number]
 
 export default function ScanResults() {
-  const { data: apiData } = useDashboard('outpost24')
+  const { data: apiData, isLoading, error } = useDashboard('outpost24')
   const d = (apiData as typeof outpost24Dashboard) ?? outpost24Dashboard
 
   return (
@@ -34,6 +34,17 @@ export default function ScanResults() {
       title="Scan Results"
       subtitle="Outpost24 — Vulnerability scan jobs, findings by severity, and coverage"
     >
+      {isLoading && (
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+          <div className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }} />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Loading live data…</span>
+        </div>
+      )}
+      {error && !isLoading && (
+        <div className="rounded-lg px-4 py-2 text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}>
+          ⚠ Failed to fetch live data — showing fallback. {error}
+        </div>
+      )}
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard title={d.scanKpis.scansToday.label}    value={d.scanKpis.scansToday.value}    trend={d.scanKpis.scansToday.trend}    icon={Scan} />

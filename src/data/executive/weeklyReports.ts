@@ -62,11 +62,11 @@ export function getRatingStyle(rating: RiskRating) {
 const REPORTS: Record<PlatformId, PlatformWeeklyReport> = {
 
   crowdstrike: {
-    platformLabel: 'CrowdStrike · Deteção e Resposta de Endpoint — Club Paulistano',
+    platformLabel: 'CrowdStrike · Deteção e Resposta de Endpoint — CAP',
     riskRating: 'Stable',
     headline: 'A postura de segurança dos endpoints manteve-se robusta; o volume de incidentes críticos diminuiu 19% face à semana anterior.',
     narrative:
-      'Esta semana, o Club Paulistano manteve uma proteção robusta dos endpoints em 2.847 ativos geridos, com o desempenho de resposta a deteções a operar dentro dos parâmetros de SLA estabelecidos pela Contego Security. ' +
+      'Esta semana, o CAP manteve uma proteção robusta dos endpoints em 2.847 ativos geridos, com o desempenho de resposta a deteções a operar dentro dos parâmetros de SLA estabelecidos pela Contego Security. ' +
       'A equipa SOC registou 34 deteções ativas e resolveu com sucesso 6 incidentes escalados, com 1 incidente ainda em investigação ativa, alcançando um tempo médio de resposta de 4,2 minutos — uma melhoria de 16% face ao período anterior. ' +
       'Três ameaças de severidade crítica relacionadas com injeção de processos e extração de credenciais foram totalmente contidas; não foi confirmado movimento lateral nem exfiltração de dados. ' +
       'A postura de risco dos endpoints é classificada como Estável, com uma trajetória de melhoria contínua apoiada por uma cobertura de aplicação de políticas de 98,6% em toda a frota gerida.',
@@ -91,11 +91,11 @@ const REPORTS: Record<PlatformId, PlatformWeeklyReport> = {
       { ref: 'INC-2024-0885', date: format(subWeeks(new Date(), 0), 'dd/MM'), category: 'Persistência', description: 'Conta não autorizada com credenciais válidas identificada', severity: 'Medium', status: 'Resolvido', owner: 'Contego SOC' },
     ],
     preparedBy: 'Contego Security — Operações SOC',
-    reviewedBy: 'Diretor de Segurança da Informação — Club Paulistano',
+    reviewedBy: 'Diretor de Segurança da Informação — CAP',
   },
 
   wazuh: {
-    platformLabel: 'Wazuh · Security Information & Event Management',
+    platformLabel: 'SIEM · Security Information & Event Management',
     riskRating: 'Moderate',
     headline: 'Alert volume elevated 19% week-over-week; compliance frameworks maintained above threshold across all standards.',
     narrative:

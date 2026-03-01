@@ -9,11 +9,34 @@ import { outpost24Dashboard, type OutpostAsset } from '@/data/outpost24/dashboar
 import { useDashboard } from '@/hooks/useDashboard'
 
 export default function Outpost24Dashboard() {
-  const { data } = useDashboard('outpost24')
+  const { data, isLoading, error } = useDashboard('outpost24')
   const d = (data as typeof outpost24Dashboard) ?? outpost24Dashboard
   return (
     <PageLayout title="Outpost24 Dashboard" subtitle="Vulnerability Management — Asset risk posture and remediation tracking">
       <ExecutiveSummary />
+      {/* Data source status */}
+      <div className="flex items-center gap-3">
+        {isLoading && (
+          <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+            <div className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }} />
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Loading live data…</span>
+          </div>
+        )}
+        {!isLoading && (
+          (data as Record<string, unknown> | null)?._live ? (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.25)', color: '#22C55E' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22C55E' }} /> Live
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: 'rgba(234,88,12,0.1)', border: '1px solid rgba(234,88,12,0.25)', color: '#F97316' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#F97316' }} /> Mock
+            </span>
+          )
+        )}
+        {error && !isLoading && (
+          <span className="text-xs" style={{ color: '#F87171' }}>⚠ {error}</span>
+        )}
+      </div>
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard title={d.kpis.totalVulns.label} value={d.kpis.totalVulns.value} trend={d.kpis.totalVulns.trend} icon={Bug} />

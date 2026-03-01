@@ -15,7 +15,7 @@ function fmtNum(n: number | string): string {
 }
 
 export default function LogAnalysis() {
-  const { data } = useDashboard('wazuh')
+  const { data, isLoading, error } = useDashboard('wazuh')
   const d = (data as any) ?? wazuhDashboard
 
   const vol = d.alertVolume ?? {} as Record<string, number>
@@ -31,6 +31,18 @@ export default function LogAnalysis() {
 
   return (
     <PageLayout title="Log Analysis" subtitle="SIEM — Alert volume, ingestion trends, and severity distribution">
+      {/* Status banners */}
+      {isLoading && (
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+          <div className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }} />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Loading live data…</span>
+        </div>
+      )}
+      {error && !isLoading && (
+        <div className="rounded-lg px-4 py-2 text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}>
+          ⚠ Failed to fetch live data — showing fallback. {error}
+        </div>
+      )}
       {/* Volume KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard title="Alerts (24h)" value={fmtNum(vol['24h'] ?? 0)} icon={Clock} />
@@ -69,7 +81,7 @@ export default function LogAnalysis() {
       {sevData.length > 0 && (
         <BarChartWidget
           title="Severity Distribution (Last 24 Hours)"
-          subtitle="Alerts grouped by Wazuh severity level"
+          subtitle="Alerts grouped by SIEM severity level"
           data={sevData}
           dataKey="value"
           labelKey="name"

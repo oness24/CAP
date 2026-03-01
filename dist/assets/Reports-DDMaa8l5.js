@@ -1,0 +1,1 @@
+import{j as t}from"./index-D_bCGnhf.js";import{C as o}from"./ComingSoon-VVMNB8fk.js";import"./PageLayout-COvJ63Gh.js";function s(){return t.jsx(o,{title:"Reports",subtitle:"Safetica - DLP audit and compliance reports"})}export{s as default};

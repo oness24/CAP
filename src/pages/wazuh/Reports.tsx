@@ -50,7 +50,7 @@ export default function Reports() {
   const periodRange = `${new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT')} – ${now.toLocaleDateString('pt-PT')}`
 
   const defaultNarrative =
-    `No período ${periodLabel.toLowerCase()} (${periodRange}), a monitorização Wazuh SIEM da infraestrutura CAP registou ` +
+    `No período ${periodLabel.toLowerCase()} (${periodRange}), a monitorização SIEM da infraestrutura CAP registou ` +
     `${totalAgents} agentes no escopo (${activeAgents} ativos), com ${fmtNum(alerts24h)} alertas nas últimas 24 horas. ` +
     `Foram detetados ${fmtNum(critHigh)} eventos de severidade elevada/crítica, priorizados pela equipa SOC. ` +
     `A classificação atual de risco é ${riskRating}, com cobertura de agentes de ${coverage}.`
@@ -60,7 +60,7 @@ export default function Reports() {
     setErrorNarrative(null)
     try {
       const text = await generateSecurityNarrative({
-        platform: 'Wazuh SIEM',
+        platform: 'SIEM',
         client: 'CAP',
         period: periodLabel,
         periodRange,
@@ -88,7 +88,7 @@ export default function Reports() {
     setErrorRecs(null)
     try {
       const recs = await generateStrategicRecommendations({
-        platform: 'Wazuh SIEM',
+        platform: 'SIEM',
         client: 'CAP',
         period: periodLabel,
         resolvedIncidents: 0,
@@ -111,7 +111,7 @@ export default function Reports() {
   return (
     <PageLayout
       title="Reports"
-      subtitle="Wazuh — Executive SIEM report with AI-powered narrative"
+      subtitle="SIEM — Executive report with AI-powered narrative"
       actions={
         <div className="flex items-center gap-2">
           <button
@@ -190,7 +190,7 @@ export default function Reports() {
           </ul>
         ) : (
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Use "Generate Recommendations" to produce AI-based action items from current Wazuh risk posture.
+            Use "Generate Recommendations" to produce AI-based action items from current SIEM risk posture.
           </p>
         )}
       </div>

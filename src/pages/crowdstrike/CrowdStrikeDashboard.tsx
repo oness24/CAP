@@ -281,10 +281,10 @@ export default function CrowdStrikeDashboard() {
           sub={`${critCount} critical`} accent="#A855F7"
         />
         <KpiTile
-          icon={Settings} value={isLoading ? '—' : 9} label="Policies" accent="#22C55E"
+          icon={Settings} value={isLoading ? '—' : 10} label="Policies" accent="#22C55E"
         />
         <KpiTile
-          icon={Lock} value={0} label="Contained" sub="isolated hosts" accent="#F59E0B"
+          icon={Lock} value={isLoading ? '—' : 0} label="Contained" sub="isolated hosts" accent="#F59E0B"
         />
       </div>
 
