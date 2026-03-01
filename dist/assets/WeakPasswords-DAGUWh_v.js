@@ -1,1 +1,0 @@
-import{j as s}from"./index-D_bCGnhf.js";import{C as e}from"./ComingSoon-VVMNB8fk.js";import"./PageLayout-COvJ63Gh.js";function i(){return s.jsx(e,{title:"Weak Passwords",subtitle:"Keeper - Users with weak or compromised credentials"})}export{i as default};

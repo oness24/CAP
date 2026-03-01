@@ -1,1 +1,0 @@
-import{j as t}from"./index-D_bCGnhf.js";import{C as a}from"./ComingSoon-VVMNB8fk.js";import"./PageLayout-COvJ63Gh.js";function s(){return t.jsx(a,{title:"Data Transfers",subtitle:"Safetica - All monitored data movement events"})}export{s as default};

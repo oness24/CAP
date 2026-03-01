@@ -35,7 +35,7 @@ export function TopBar() {
         <div className="flex flex-col leading-none">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              Visibilidade Contego
+              Visibilidade CAP
             </span>
             <Settings
               size={12}

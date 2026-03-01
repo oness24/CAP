@@ -1,1 +1,0 @@
-import{j as t}from"./index-D_bCGnhf.js";import{C as i}from"./ComingSoon-VVMNB8fk.js";import"./PageLayout-COvJ63Gh.js";function o(){return t.jsx(i,{title:"Risk Analytics",subtitle:"Safetica - Insider risk scoring and trends"})}export{o as default};

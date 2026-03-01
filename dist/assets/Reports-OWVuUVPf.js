@@ -1,1 +1,0 @@
-import{j as t}from"./index-D_bCGnhf.js";import{C as o}from"./ComingSoon-VVMNB8fk.js";import"./PageLayout-COvJ63Gh.js";function p(){return t.jsx(o,{title:"Reports",subtitle:"Keeper - Security and compliance reports"})}export{p as default};

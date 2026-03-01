@@ -1,0 +1,1 @@
+import{j as t}from"./index-CHQ7cDcl.js";import{C as i}from"./ComingSoon-DWYK3dKm.js";import"./PageLayout-CbcLwNEK.js";function n(){return t.jsx(i,{title:"User Activity",subtitle:"Safetica - Behavioral monitoring and timeline"})}export{n as default};

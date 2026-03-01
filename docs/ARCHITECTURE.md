@@ -1,6 +1,6 @@
 # CAP_DASH — Architecture & Developer Documentation
 
-> Visibilidade Contego — Unified Security Operations Dashboard
+> Visibilidade CAP — Unified Security Operations Dashboard
 > React + TypeScript + Vite frontend · Python FastAPI backend
 
 ---
@@ -288,7 +288,7 @@ The `useAccentColor` hook (inside `usePlatform`) injects platform accent colors 
 ```
 RootLayout (flex-col, full screen)
 ├── TopBar (h-16, full width)
-│   ├── Left: Shield icon + "Visibilidade Contego" + tagline
+│   ├── Left: Shield icon + "Visibilidade CAP" + tagline
 │   └── Right: Bell (notification) + User card (name, email, chevron) + Logout
 └── div (flex-row, flex-1, overflow hidden)
     ├── Sidebar (w-64 expanded / w-16 collapsed, h-full)
