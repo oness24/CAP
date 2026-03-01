@@ -1,0 +1,1 @@
+{"method":"GET","path":"/alerts","body":{"params":{"q":"agent.groups=CAP","limit":1,"sort":"-timestamp"}},"id":"default"}

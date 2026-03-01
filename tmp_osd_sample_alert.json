@@ -1,0 +1,1 @@
+{"params":{"index":"wazuh-alerts-*","body":{"size":1,"sort":[{"timestamp":{"order":"desc"}}],"_source":["timestamp","agent.id","agent.name","agent.ip","agent.groups","rule.level","rule.description","rule.groups","data.win.system.computer","location"]}}}

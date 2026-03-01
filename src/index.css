@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Default accent — CrowdStrike Blue (overridden per platform by useAccentColor) */
+  --accent-primary: #3B82F6;
+  --accent-secondary: #60A5FA;
+  --accent-glow: rgba(59, 130, 246, 0.3);
+  --accent-gradient: linear-gradient(135deg, #1D6AE5 0%, #3B82F6 100%);
+
+  /* ── Deep Navy Theme ────────────────────────────────────── */
+  --bg-base:     #060C1A;   /* darkest navy base            */
+  --bg-surface:  #091525;   /* sidebar / topbar             */
+  --bg-elevated: #0D1E38;   /* cards, panels                */
+  --bg-overlay:  #122240;   /* hover / dropdown states      */
+
+  /* Text — bright & blue-tinted */
+  --text-primary:   #EDF5FF;
+  --text-secondary: #7BB3E0;
+  --text-muted:     #4A7CAF;
+
+  /* Borders — visible with blue tint */
+  --border-subtle:  rgba(99, 155, 230, 0.12);
+  --border-default: rgba(99, 155, 230, 0.22);
+  --border-strong:  rgba(99, 155, 230, 0.38);
+
+  /* Status */
+  --status-critical: #F87171;
+  --status-high:     #FB923C;
+  --status-medium:   #FBBF24;
+  --status-low:      #34D399;
+  --status-info:     #60A5FA;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ambient radial glow from top-left — gives the "not-flat" depth */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(29, 106, 229, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 100%, rgba(124, 58, 237, 0.07) 0%, transparent 55%);
+}
+
+/* Everything sits above the ambient glow */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Thin top accent line */
+#root::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 9999;
+  background: linear-gradient(90deg, #7B1D1D 0%, #1D4ED8 50%, #7C3AED 100%);
+  pointer-events: none;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 155, 230, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(99, 155, 230, 0.45); }
+
+/* ── Recharts ────────────────────────────────────────────── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(7, 14, 29, 0.95) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: 10px !important;
+  color: var(--text-primary) !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border-subtle) !important;
+}
+
+.recharts-active-dot circle {
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.85); }
+}
+
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(400%); }
+}
+
+@keyframes chartShimmer {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+
+/* ── Utility: glowing accent ring on focus ───────────────── */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}

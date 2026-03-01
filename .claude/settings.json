@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:8003/api/v1/platforms/ -H \"Authorization: Bearer test\")"
+    ]
+  }
+}

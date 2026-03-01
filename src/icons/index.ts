@@ -1,0 +1,6 @@
+export { CrowdStrikeLogo } from './CrowdStrikeLogo'
+export { WazuhLogo } from './WazuhLogo'
+export { SafeticaLogo } from './SafeticaLogo'
+export { Outpost24Logo } from './Outpost24Logo'
+export { KeeperLogo } from './KeeperLogo'
+export { ZabbixLogo } from './ZabbixLogo'

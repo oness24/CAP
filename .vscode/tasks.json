@@ -1,0 +1,354 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "dev-frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev",
+				"--",
+				"--host",
+				"127.0.0.1",
+				"--port",
+				"5173"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "build-frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			]
+		},
+		{
+			"label": "pytest-backend",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q"
+			],
+			"group": "test"
+		},
+		{
+			"label": "pytest-backend",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q",
+				"backend/tests"
+			],
+			"group": "test"
+		},
+		{
+			"label": "zabbix-smoke",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-c",
+				"import os; os.chdir('backend'); from fastapi.testclient import TestClient; from main import app; c=TestClient(app); l=c.post('/api/v1/auth/login', json={'email':'admin@capdash.io','password':'Admin@123'}); print('login', l.status_code); h={'Authorization': f\"Bearer {l.json()['access_token']}\"}; r=c.get('/api/v1/platforms/zabbix/hosts?page=1&limit=5', headers=h); print('zabbix_hosts', r.status_code, r.json().get('total'), len(r.json().get('items',[]))); t=c.get('/api/v1/platforms/zabbix/triggers?page=1&limit=5', headers=h); print('zabbix_triggers', t.status_code, t.json().get('total'), len(t.json().get('items',[])))"
+			]
+		},
+		{
+			"label": "zabbix-smoke-file",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/.tmp_zabbix_smoke.py"
+			]
+		},
+		{
+			"label": "seed-root-db",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/seed.py"
+			]
+		},
+		{
+			"label": "zabbix-smoke-file",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/.tmp_zabbix_smoke.py"
+			]
+		},
+		{
+			"label": "pytest-backend",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q",
+				"backend/tests"
+			],
+			"group": "test"
+		},
+		{
+			"label": "zbx-compare",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/.tmp_zbx_compare.py"
+			]
+		},
+		{
+			"label": "pytest-backend",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q",
+				"backend/tests"
+			],
+			"group": "test"
+		},
+		{
+			"label": "zbx-compare",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/.tmp_zbx_compare.py"
+			]
+		},
+		{
+			"label": "pytest-backend",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q",
+				"backend/tests"
+			],
+			"group": "test"
+		},
+		{
+			"label": "zbx-error-check",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/.tmp_zbx_error_check.py"
+			]
+		},
+		{
+			"label": "free-backend-port",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$conn = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if ($conn) { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue; Write-Output 'Freed 8000' } else { Write-Output 'No listener on 8000' }"
+			]
+		},
+		{
+			"label": "dev-backend",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"uvicorn",
+				"main:app",
+				"--host",
+				"127.0.0.1",
+				"--port",
+				"8000"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "dev-backend",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Set-Location backend; C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe -m uvicorn main:app --host 127.0.0.1 --port 8000"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "dev-backend-from-backend-dir",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Set-Location backend; C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe -m uvicorn main:app --host 127.0.0.1 --port 8000"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "restart-backend-clean",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$c=Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if ($c) { Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 500 }; Set-Location backend; C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe -m uvicorn main:app --host 127.0.0.1 --port 8000"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "restart-frontend-clean",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$c=Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if ($c) { Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 500 }; npm run dev -- --host 127.0.0.1 --port 5173"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "restart-backend-single",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$conns = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue; if ($conns) { $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $pids) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue } ; Start-Sleep -Milliseconds 800 }; Set-Location backend; C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe -m uvicorn main:app --host 127.0.0.1 --port 8000"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "restart-frontend-single",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$ports = @(5173,5174); foreach ($port in $ports) { $conns = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue; if ($conns) { $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $pids) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue } } }; Start-Sleep -Milliseconds 800; npm run dev -- --host 127.0.0.1 --port 5173"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "stop-5174",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$conns = Get-NetTCPConnection -LocalPort 5174 -State Listen -ErrorAction SilentlyContinue; if ($conns) { $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $pids) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Write-Output 'Stopped 5174' } else { Write-Output 'No listener on 5174' }"
+			]
+		},
+		{
+			"label": "restart-backend-after-env",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$conns = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue; if ($conns) { $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $pids) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue } }; Start-Sleep -Milliseconds 700; Set-Location backend; C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe -m uvicorn main:app --host 127.0.0.1 --port 8000"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "api-login-check",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-c",
+				"import httpx; r=httpx.post('http://127.0.0.1:8000/api/v1/auth/login', json={'email':'admin@capdash.io','password':'Admin@123'}, timeout=20); print(r.status_code); print(r.text[:300])"
+			]
+		},
+		{
+			"label": "restart-frontend-after-env",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$ports = @(5173,5174); foreach ($port in $ports) { $conns = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue; if ($conns) { $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $pids) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue } } }; Start-Sleep -Milliseconds 700; npm run dev -- --host 127.0.0.1 --port 5173"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "login-api-smoke",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/.tmp_login_check.py"
+			]
+		},
+		{
+			"label": "build-frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			]
+		},
+		{
+			"label": "kill-8000-all",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$conns = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue; if ($conns) { $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $pids) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Write-Output \"Killed: $($pids -join ',')\" } else { Write-Output 'No listener on 8000' }"
+			]
+		},
+		{
+			"label": "cors-check",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/.tmp_cors_check.py"
+			]
+		},
+		{
+			"label": "cors-check-2",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"backend/.tmp_cors_check.py"
+			]
+		},
+		{
+			"label": "pytest-backend",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q",
+				"backend/tests"
+			],
+			"group": "test"
+		},
+		{
+			"label": "pytest-backend-2",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q",
+				"backend/tests"
+			],
+			"group": "test"
+		},
+		{
+			"label": "kill-backend-8000",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$conns = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue; if ($conns) { $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $pids) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Write-Output ('Killed backend PID(s): ' + ($pids -join ',')) } else { Write-Output 'No backend listener on 8000' }"
+			]
+		}
+	]
+}

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(C:/Users/OnesmusSimiyu/Desktop/CAP_DASH/backend/.env:*)",
+      "Bash(C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.exe -m pip install httpx)",
+      "Bash(C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.exe -m uvicorn main:app --reload --port 8000)",
+      "Bash(npm run dev)",
+      "Bash(C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.exe -c \":*)"
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  }
+}

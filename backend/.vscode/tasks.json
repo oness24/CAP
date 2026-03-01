@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "pytest-backend",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q"
+			]
+		},
+		{
+			"label": "zabbix-smoke",
+			"type": "shell",
+			"command": "C:/Users/OnesmusSimiyu/AppData/Local/Microsoft/WindowsApps/python3.12.exe",
+			"args": [
+				"-c",
+				"from fastapi.testclient import TestClient; from main import app; c=TestClient(app); l=c.post('/api/v1/auth/login', json={'email':'admin@capdash.io','password':'Admin@123'}); print('login', l.status_code); h={'Authorization': f\"Bearer {l.json()['access_token']}\"}; r=c.get('/api/v1/platforms/zabbix/hosts?page=1&limit=5', headers=h); print('zabbix_hosts', r.status_code, r.json().get('total'), len(r.json().get('items',[]))); t=c.get('/api/v1/platforms/zabbix/triggers?page=1&limit=5', headers=h); print('zabbix_triggers', t.status_code, t.json().get('total'), len(t.json().get('items',[])))"
+			]
+		}
+	]
+}

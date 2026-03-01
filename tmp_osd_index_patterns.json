@@ -1,0 +1,1 @@
+{"params":{"index":".kibana*","body":{"size":50,"query":{"bool":{"filter":[{"term":{"type":"index-pattern"}},{"query_string":{"query":"index-pattern.title:wazuh*"}}]}},"_source":["index-pattern.title","index-pattern.timeFieldName","type"]}}}

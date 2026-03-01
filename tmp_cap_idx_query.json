@@ -1,0 +1,1 @@
+{"params":{"index":"wazuh-alerts-cap_*","body":{"size":1,"sort":[{"timestamp":{"order":"desc"}}],"_source":true}}}

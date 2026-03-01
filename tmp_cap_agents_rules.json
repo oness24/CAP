@@ -1,0 +1,1 @@
+{"params":{"index":"wazuh-alerts-cap_*","body":{"size":0,"aggs":{"unique_agents":{"cardinality":{"field":"agent_name"}},"top_rules":{"terms":{"field":"rule_description","size":10}},"top_rule_ids":{"terms":{"field":"rule_id","size":10}},"unique_agent_names":{"terms":{"field":"agent_name","size":100}}}}}}

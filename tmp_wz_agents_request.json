@@ -1,0 +1,1 @@
+{"method":"GET","path":"/agents?limit=500&q=group=CAP&select=id,name,ip,status,os.name,os.version,group,lastKeepAlive","body":{},"id":"default"}

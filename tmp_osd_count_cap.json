@@ -1,0 +1,1 @@
+{"params":{"index":"wazuh-alerts-*","body":{"size":0,"query":{"bool":{"filter":[{"range":{"@timestamp":{"gte":"now-24h","lte":"now"}}},{"term":{"agent.groups":"CAP"}}]}}}}}
