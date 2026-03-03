@@ -672,9 +672,6 @@ export default function ResumoExecutivo() {
   const offlinePlatformCount = platformIntel.offlineCount
   const onlinePlatforms = platformIntel.onlineCount
 
-  const scoreLivePlatforms = SCORE_PLATFORM_IDS.filter((pid) => platformStatus[pid] === 'live')
-    .map((pid) => EXECUTIVE_PLATFORM_LABELS[pid].split(' (')[0])
-
   const severityCounters = useMemo<SeverityCounters>(() => {
     const counters: SeverityCounters = {
       critical: 0,
