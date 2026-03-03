@@ -1,1 +1,36 @@
-node_modules
+# Dependencies
+node_modules/
+.venv/
+
+# Environment / Secrets
+.env
+backend/.env
+
+# Build outputs
+dist/
+build/
+
+# Database
+*.db
+*.db-journal
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# Temp debug files
+tmp_*
+*.tmp
+
+# Logs
+logs/
+*.log
