@@ -83,55 +83,59 @@ class Outpost24Client:
 
     # ── Auth ──────────────────────────────────────────────────────────────
 
-    def _ensure_token(self) -> str:
+    def _ensure_token(self, force_refresh: bool = False) -> str:
         now = time.time()
-        if self._token and now < self._token_expiry:
+        if not force_refresh and self._token and now < self._token_expiry:
             return self._token
         with self._lock:
-            if self._token and time.time() < self._token_expiry:
+            if not force_refresh and self._token and time.time() < self._token_expiry:
                 return self._token
             resp = self._http.post(
                 f"{self._base_url}/opi/rest/auth/login",
                 data={"username": self._username, "password": self._password},
             )
             resp.raise_for_status()
-            self._token = resp.text.strip()
+            self._token = resp.text.strip().strip('"')
             self._token_expiry = time.time() + 1500  # 25 min
             logger.info("Outpost24 auth token refreshed")
             return self._token
 
-    def _headers(self) -> dict[str, str]:
+    def _headers(self, force_refresh: bool = False) -> dict[str, str]:
         return {
-            "Authorization": f"Bearer {self._ensure_token()}",
+            "Authorization": f"Bearer {self._ensure_token(force_refresh=force_refresh)}",
             "Accept": "application/json",
         }
+
+    def _get_with_reauth(self, path: str, timeout: float | None = None) -> list[dict]:
+        kwargs: dict = {
+            "headers": self._headers(),
+        }
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+
+        response = self._http.get(f"{self._base_url}{path}", **kwargs)
+        if response.status_code == 401:
+            logger.warning("Outpost24 returned 401 on %s; refreshing token and retrying once", path)
+            retry_kwargs: dict = {
+                "headers": self._headers(force_refresh=True),
+            }
+            if timeout is not None:
+                retry_kwargs["timeout"] = timeout
+            response = self._http.get(f"{self._base_url}{path}", **retry_kwargs)
+
+        response.raise_for_status()
+        return response.json()
 
     # ── Raw fetches ───────────────────────────────────────────────────────
 
     def _get_targets(self) -> list[dict]:
-        r = self._http.get(
-            f"{self._base_url}/opi/rest/outscan/targets",
-            headers=self._headers(),
-        )
-        r.raise_for_status()
-        return r.json()
+        return self._get_with_reauth("/opi/rest/outscan/targets")
 
     def _get_findings(self) -> list[dict]:
-        r = self._http.get(
-            f"{self._base_url}/opi/rest/outscan/findings",
-            headers=self._headers(),
-            timeout=120,
-        )
-        r.raise_for_status()
-        return r.json()
+        return self._get_with_reauth("/opi/rest/outscan/findings", timeout=120)
 
     def _get_schedules(self) -> list[dict]:
-        r = self._http.get(
-            f"{self._base_url}/opi/rest/outscan/schedules",
-            headers=self._headers(),
-        )
-        r.raise_for_status()
-        return r.json()
+        return self._get_with_reauth("/opi/rest/outscan/schedules")
 
     # ── Dashboard builder ─────────────────────────────────────────────────
 

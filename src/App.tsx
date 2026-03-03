@@ -23,14 +23,6 @@ const Agents = lazy(() => import('./pages/wazuh/Agents'))
 const Compliance = lazy(() => import('./pages/wazuh/Compliance'))
 const WazuhReports = lazy(() => import('./pages/wazuh/Reports'))
 
-// Safetica
-const SafeticaDashboard = lazy(() => import('./pages/safetica/SafeticaDashboard'))
-const DataTransfers = lazy(() => import('./pages/safetica/DataTransfers'))
-const PolicyViolations = lazy(() => import('./pages/safetica/PolicyViolations'))
-const UserActivity = lazy(() => import('./pages/safetica/UserActivity'))
-const RiskAnalytics = lazy(() => import('./pages/safetica/RiskAnalytics'))
-const SafeticaReports = lazy(() => import('./pages/safetica/Reports'))
-
 // Outpost24
 const Outpost24Dashboard = lazy(() => import('./pages/outpost24/Outpost24Dashboard'))
 const ScanResults = lazy(() => import('./pages/outpost24/ScanResults'))
@@ -103,16 +95,6 @@ export default function App() {
             <Route path="agents" element={<Suspense fallback={<PageSkeleton />}><Agents /></Suspense>} />
             <Route path="compliance" element={<Suspense fallback={<PageSkeleton />}><Compliance /></Suspense>} />
             <Route path="reports" element={<Suspense fallback={<PageSkeleton />}><WazuhReports /></Suspense>} />
-          </Route>
-
-          {/* Safetica */}
-          <Route path="safetica">
-            <Route path="dashboard" element={<Suspense fallback={<PageSkeleton />}><SafeticaDashboard /></Suspense>} />
-            <Route path="data-transfers" element={<Suspense fallback={<PageSkeleton />}><DataTransfers /></Suspense>} />
-            <Route path="policy-violations" element={<Suspense fallback={<PageSkeleton />}><PolicyViolations /></Suspense>} />
-            <Route path="user-activity" element={<Suspense fallback={<PageSkeleton />}><UserActivity /></Suspense>} />
-            <Route path="risk-analytics" element={<Suspense fallback={<PageSkeleton />}><RiskAnalytics /></Suspense>} />
-            <Route path="reports" element={<Suspense fallback={<PageSkeleton />}><SafeticaReports /></Suspense>} />
           </Route>
 
           {/* Outpost24 */}

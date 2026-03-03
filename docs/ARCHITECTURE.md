@@ -27,7 +27,7 @@
 7. [Platform Pages](#7-platform-pages)
    - 7.1 [CrowdStrike Falcon EDR](#71-crowdstrike-falcon-edr)
    - 7.2 [Zabbix](#72-zabbix)
-   - 7.3 [Wazuh, Safetica, Outpost24, Keeper](#73-other-platforms)
+   - 7.3 [Wazuh, Outpost24, Keeper](#73-other-platforms)
 8. [AI Features (OpenAI)](#8-ai-features-openai)
 9. [Chart Design System](#9-chart-design-system)
 10. [Environment Variables](#10-environment-variables)
@@ -38,14 +38,13 @@
 
 ## 1. Project Overview
 
-CAP_DASH is an MSSP-ready security operations dashboard built for **Club Paulistano** by **Contego Security**. It provides a single-pane-of-glass view across 6 security platforms:
+CAP_DASH is an MSSP-ready security operations dashboard built for **Club Paulistano** by **Contego Security**. It provides a single-pane-of-glass view across 5 security platforms:
 
 | Platform     | Category                          | Live API | Color   |
-|-------------|-----------------------------------|----------|---------|
+|-------------|-----------------------------------|----------|---------|  
 | CrowdStrike | Endpoint Detection & Response     | ✅ Yes   | #1D6AE5 |
 | Zabbix      | Infrastructure Monitoring         | ✅ Yes   | #DC2626 |
 | Wazuh       | SIEM                              | ❌ Mock  | #7C3AED |
-| Safetica    | Data Loss Prevention              | ❌ Mock  | #0D9488 |
 | Outpost24   | Vulnerability Management          | ❌ Mock  | #EA580C |
 | Keeper      | Password Security & Vault         | ❌ Mock  | #16A34A |
 
@@ -119,7 +118,7 @@ CAP_DASH/
 │   │   ├── auth/LoginPage.tsx
 │   │   ├── crowdstrike/           # CrowdStrike pages (Dashboard, Detections, Endpoints, Incidents, Vulnerabilities, Policies, Reports)
 │   │   ├── zabbix/                # Zabbix pages (Dashboard, Triggers, HostAvailability, HostGroups, NetworkMonitoring, SLAReports, Reports)
-│   │   └── [wazuh|safetica|outpost24|keeper]/
+│   │   └── [wazuh|outpost24|keeper]/
 │   ├── store/
 │   │   ├── authStore.ts           # Zustand JWT store (persisted)
 │   │   └── uiStore.ts             # Sidebar collapsed state
@@ -363,7 +362,7 @@ const d = (data as typeof crowdstrikeDashboard) ?? crowdstrikeDashboard
 
 ### 7.3 Other Platforms
 
-Wazuh, Safetica, Outpost24, and Keeper use static mock data only. Their dashboard pages are implemented with generic chart widgets. Sub-pages use `ComingSoon` stubs.
+Wazuh, Outpost24, and Keeper use static mock data only. Their dashboard pages are implemented with generic chart widgets. Sub-pages use `ComingSoon` stubs.
 
 ---
 

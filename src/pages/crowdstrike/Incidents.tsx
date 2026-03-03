@@ -22,8 +22,8 @@ function fmtDate(iso: string) {
   return isNaN(d.getTime()) ? iso : d.toLocaleString()
 }
 function severityLabel(score: number): string {
-  if (score >= 80) return 'Critical'
-  if (score >= 60) return 'High'
+  if (score >= 90) return 'Critical'
+  if (score >= 70) return 'High'
   if (score >= 40) return 'Medium'
   return 'Low'
 }

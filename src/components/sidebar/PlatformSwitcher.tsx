@@ -6,21 +6,110 @@ import { usePlatform } from '@/hooks/usePlatform'
 import { PLATFORM_LIST, PLATFORM_REGISTRY } from '@/constants/platforms'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { NavItem } from './NavItem'
-import type { PlatformId } from '@/types'
+import { api } from '@/lib/api'
+import type { NavItem as NavItemType, PlatformId } from '@/types'
 
 interface Props {
   collapsed: boolean
+}
+
+type DashboardMap = Partial<Record<PlatformId, Record<string, unknown>>>
+
+function toNumber(value: unknown): number {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(/[,%\s]/g, ''))
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+  return 0
+}
+
+function withLiveBadge(navItem: NavItemType, platformId: PlatformId, dashboards: DashboardMap): NavItemType {
+  const d = dashboards[platformId]
+  if (!d) return navItem
+
+  const kpis = (d.kpis as Record<string, { value?: unknown }> | undefined) ?? {}
+
+  if (platformId === 'zabbix' && navItem.id === 'triggers') {
+    const fromKpi = toNumber(kpis.activeTriggers?.value)
+    const fromList = Array.isArray(d.activeProblems) ? d.activeProblems.length : 0
+    const count = fromKpi > 0 ? fromKpi : fromList
+    return { ...navItem, badge: { text: String(count), variant: count > 0 ? 'red' : 'green' } }
+  }
+
+  if (platformId === 'keeper' && navItem.id === 'weak-passwords') {
+    const count = toNumber(kpis.weakPasswords?.value)
+    return { ...navItem, badge: { text: String(count), variant: count > 0 ? 'red' : 'green' } }
+  }
+
+  if (platformId === 'wazuh' && navItem.id === 'alerts') {
+    const count = toNumber(kpis.activeAlerts?.value)
+    return { ...navItem, badge: { text: String(count), variant: count > 0 ? 'orange' : 'green' } }
+  }
+
+  if (platformId === 'outpost24' && navItem.id === 'remediation') {
+    const count = toNumber(kpis.criticalCVEs?.value)
+    return { ...navItem, badge: { text: String(count), variant: count > 0 ? 'orange' : 'green' } }
+  }
+
+  return navItem
 }
 
 export function PlatformSwitcher({ collapsed }: Props) {
   const { activePlatform, switchPlatform } = usePlatform()
   const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState<PlatformId | null>(activePlatform)
+  const [dashboards, setDashboards] = useState<DashboardMap>({})
 
   // Auto-expand when active platform changes externally
   useEffect(() => {
     setExpandedId(activePlatform)
   }, [activePlatform])
+
+  useEffect(() => {
+    let cancelled = false
+    let activeController: AbortController | null = null
+    const platformIds: PlatformId[] = ['crowdstrike', 'wazuh', 'outpost24', 'keeper', 'zabbix']
+
+    const fetchDashboards = async () => {
+      activeController?.abort()
+      const controller = new AbortController()
+      activeController = controller
+
+      const entries = await Promise.all(
+        platformIds.map(async (platformId) => {
+          try {
+            const response = await api.get<{ platform_id: string; data: Record<string, unknown> }>(
+              `/platforms/${platformId}/dashboard`,
+              { signal: controller.signal },
+            )
+            return [platformId, response.data] as const
+          } catch {
+            return [platformId, null] as const
+          }
+        }),
+      )
+
+      if (cancelled) return
+
+      const next: DashboardMap = {}
+      for (const [platformId, data] of entries) {
+        if (data) next[platformId] = data
+      }
+      setDashboards(next)
+    }
+
+    void fetchDashboards()
+    const intervalId = window.setInterval(() => {
+      void fetchDashboards()
+    }, 60_000)
+
+    return () => {
+      cancelled = true
+      activeController?.abort()
+      window.clearInterval(intervalId)
+    }
+  }, [])
 
   function handlePlatformClick(id: PlatformId) {
     if (id !== activePlatform) {
@@ -184,7 +273,11 @@ export function PlatformSwitcher({ collapsed }: Props) {
                 >
                   <div className="flex flex-col gap-0.5 pl-3 pr-1 pt-0.5 pb-1.5">
                     {platform.nav.map((navItem) => (
-                      <NavItem key={navItem.id} item={navItem} collapsed={false} />
+                      <NavItem
+                        key={navItem.id}
+                        item={withLiveBadge(navItem, platform.id, dashboards)}
+                        collapsed={false}
+                      />
                     ))}
                   </div>
                 </motion.div>

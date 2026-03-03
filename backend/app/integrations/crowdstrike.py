@@ -66,6 +66,17 @@ _SEVERITY_LEVELS = [
     ("Low",      "#22C55E"),
 ]
 
+
+def _normalize_detection_severity(raw: str, tactic: str, technique: str) -> str:
+    normalized = _SEVERITY_MAP.get(raw or "", "Medium")
+    tactic_l = (tactic or "").strip().lower()
+    technique_l = (technique or "").strip().lower()
+
+    if normalized == "Critical" and tactic_l == "defense evasion" and "impair defenses" in technique_l:
+        return "High"
+
+    return normalized
+
 _OS_FILTERS = [
     ("Windows", "platform_name:'Windows'"),
     ("macOS",   "platform_name:'Mac'"),
@@ -171,6 +182,7 @@ class CrowdStrikeClient:
         for a in detail_data.get("resources", []):
             tactic    = a.get("tactic", "")
             technique = a.get("technique", "")
+            severity_raw = a.get("severity_name", "")
             label = (
                 f"{tactic} — {technique}" if tactic and technique
                 else technique or tactic or a.get("name", "Unknown")
@@ -179,7 +191,7 @@ class CrowdStrikeClient:
                 "id":        a.get("composite_id", a.get("id", "")),
                 "hostname":  a.get("device", {}).get("hostname", "Unknown"),
                 "technique": label,
-                "severity":  _SEVERITY_MAP.get(a.get("severity_name", ""), "Medium"),
+                "severity":  _normalize_detection_severity(severity_raw, tactic, technique),
                 "status":    a.get("status", "new").replace("_", " ").title(),
                 "timestamp": a.get("created_timestamp", ""),
                 "analyst":   a.get("user_name") or "Unassigned",
@@ -430,6 +442,7 @@ class CrowdStrikeClient:
         for a in detail_data.get("resources", []):
             tactic    = a.get("tactic", "")
             technique = a.get("technique", "")
+            severity_raw = a.get("severity_name", "")
             label = (
                 f"{tactic} — {technique}" if tactic and technique
                 else technique or tactic or a.get("name", "Unknown")
@@ -439,8 +452,8 @@ class CrowdStrikeClient:
                 "hostname":    a.get("device", {}).get("hostname", "Unknown"),
                 "technique":   label,
                 "tactic":      tactic,
-                "severity":    _SEVERITY_MAP.get(a.get("severity_name", ""), "Medium"),
-                "severity_raw": a.get("severity_name", ""),
+                "severity":    _normalize_detection_severity(severity_raw, tactic, technique),
+                "severity_raw": severity_raw,
                 "status":      a.get("status", "new").replace("_", " ").title(),
                 "timestamp":   a.get("created_timestamp", ""),
                 "analyst":     a.get("user_name") or "Unassigned",

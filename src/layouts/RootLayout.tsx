@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { TopBar } from '@/components/topbar/TopBar'
 import { useAccentColor } from '@/hooks/useAccentColor'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 function PageSkeleton() {
   return (
@@ -27,20 +28,22 @@ export function RootLayout() {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-y-auto" style={{ background: 'var(--bg-base)' }}>
-          <Suspense fallback={<PageSkeleton />}>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className="h-full"
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="h-full"
+                >
+                  <Outlet />
+                </motion.div>
+              </AnimatePresence>
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

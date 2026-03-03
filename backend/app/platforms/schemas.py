@@ -5,7 +5,6 @@ from pydantic import BaseModel
 PLATFORM_CONFIGS = [
     {"id": "crowdstrike", "name": "CrowdStrike",  "category": "Endpoint Detection & Response", "color": "#1D6AE5"},
     {"id": "wazuh",       "name": "Wazuh",         "category": "Security Information & Event Management", "color": "#7C3AED"},
-    {"id": "safetica",    "name": "Safetica",       "category": "Data Loss Prevention",         "color": "#0D9488"},
     {"id": "outpost24",   "name": "Outpost24",      "category": "Vulnerability Management",     "color": "#EA580C"},
     {"id": "keeper",      "name": "Keeper",         "category": "Password Security & Vault Management", "color": "#16A34A"},
     {"id": "zabbix",      "name": "Zabbix",         "category": "Infrastructure Monitoring",    "color": "#DC2626"},

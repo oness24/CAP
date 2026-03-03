@@ -1,6 +1,0 @@
-import{c as s,j as e}from"./index-CHQ7cDcl.js";import{P as a}from"./PageLayout-CbcLwNEK.js";/**
- * @license lucide-react v0.446.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const o=s("Construction",[["rect",{x:"2",y:"6",width:"20",height:"8",rx:"1",key:"1estib"}],["path",{d:"M17 14v7",key:"7m2elx"}],["path",{d:"M7 14v7",key:"1cm7wv"}],["path",{d:"M17 3v3",key:"1v4jwn"}],["path",{d:"M7 3v3",key:"7o6guu"}],["path",{d:"M10 14 2.3 6.3",key:"1023jk"}],["path",{d:"m14 6 7.7 7.7",key:"1s8pl2"}],["path",{d:"m8 6 8 8",key:"hl96qh"}]]);function i({title:t,subtitle:r}){return e.jsx(a,{title:t,subtitle:r,children:e.jsxs("div",{className:"flex flex-col items-center justify-center py-24 gap-4",children:[e.jsx("div",{className:"w-16 h-16 rounded-2xl flex items-center justify-center",style:{background:"var(--bg-elevated)",border:"1px solid var(--border-default)"},children:e.jsx(o,{size:28,style:{color:"var(--accent-primary)"}})}),e.jsxs("div",{className:"text-center",children:[e.jsx("h2",{className:"text-base font-semibold",style:{color:"var(--text-primary)"},children:"Page Under Construction"}),e.jsx("p",{className:"text-sm mt-1",style:{color:"var(--text-muted)"},children:"This view will display real data once connected to the platform API."})]})]})})}export{i as C};

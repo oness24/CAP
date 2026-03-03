@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     wazuh_api_id: str = "default"
     wazuh_group: str = "CAP"
 
+    # Keeper Security (Enterprise)
+    keeper_base_url: str = "https://keepersecurity.com"
+    keeper_email: str = ""
+    keeper_password: str = ""
+    keeper_client_filter: str = "CLUB ATHLETICO PAULISTANO"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",")]

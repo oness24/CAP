@@ -1,1 +1,0 @@
-import{j as t}from"./index-CHQ7cDcl.js";import{C as i}from"./ComingSoon-DWYK3dKm.js";import"./PageLayout-CbcLwNEK.js";function s(){return t.jsx(i,{title:"User Audit",subtitle:"Keeper - Vault access and activity audit log"})}export{s as default};

@@ -1,1 +1,0 @@
-import{j as o}from"./index-CHQ7cDcl.js";import{C as t}from"./ComingSoon-DWYK3dKm.js";import"./PageLayout-CbcLwNEK.js";function s(){return o.jsx(t,{title:"Policy Violations",subtitle:"Safetica - DLP policy breach events"})}export{s as default};

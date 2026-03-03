@@ -186,6 +186,20 @@ export function ExecutiveSummary() {
   const week = getWeekRange(weeksBack)
   const color = config.colors.primary
 
+  const parsePercent = (value: unknown): number => {
+    if (typeof value === 'number') return value
+    if (typeof value !== 'string') return 0
+    const parsed = Number(value.replace('%', '').trim())
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  const toNumber = (value: unknown): number => {
+    if (typeof value === 'number') return value
+    if (typeof value !== 'string') return 0
+    const parsed = Number(value.replace(/,/g, '').trim())
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
   const liveReport = useMemo(() => {
     if (activePlatform !== 'wazuh' || !liveDashboard) return null
 
@@ -272,53 +286,171 @@ export function ExecutiveSummary() {
     }
   }, [activePlatform, liveDashboard, staticReport, week.label, aiHeadline, aiNarrative])
 
-  const report = liveReport ?? staticReport
+  const keeperLiveReport = useMemo(() => {
+    if (activePlatform !== 'keeper' || !liveDashboard) return null
+
+    const d = liveDashboard as Record<string, unknown>
+    const kpis = (d.kpis as Record<string, { value?: string | number }> | undefined) ?? {}
+    const riskUsers = (d.highRiskUsers as Array<Record<string, unknown>> | undefined) ?? []
+    const deptRisk = (d.deptRiskScores as Array<{ dept: string; score: number }> | undefined) ?? []
+
+    const securityScore = toNumber(kpis.securityScore?.value)
+    const totalUsers = toNumber(kpis.totalUsers?.value)
+    const weakPasswords = toNumber(kpis.weakPasswords?.value)
+    const breachedPasswords = toNumber(kpis.breachedPasswords?.value)
+    const mfaAdoption = parsePercent(kpis.mfaAdoption?.value)
+    const policyCompliance = parsePercent(kpis.policyCompliance?.value)
+
+    const riskRating: RiskRating =
+      breachedPasswords >= 10 || mfaAdoption < 75 ? 'Critical' :
+      breachedPasswords >= 5 || mfaAdoption < 85 ? 'Elevated' :
+      weakPasswords >= 150 || policyCompliance < 90 ? 'Moderate' :
+      'Stable'
+
+    const lowestDept = deptRisk.length
+      ? [...deptRisk].sort((a, b) => Number(a.score ?? 0) - Number(b.score ?? 0))[0]
+      : null
+
+    const incidents = riskUsers.slice(0, 8).map((user, index) => {
+      const weak = toNumber(user.weakCount)
+      const reused = toNumber(user.reusedCount)
+      const risk = toNumber(user.riskScore)
+      const severity = risk >= 85 ? 'High' : risk >= 70 ? 'Medium' : 'Low'
+      const mfaState = String(user.mfaStatus ?? 'Unknown')
+      return {
+        ref: String(user.id ?? `KPR-${index + 1}`),
+        date: week.label,
+        category: 'Credential Risk',
+        description: `${String(user.user ?? 'User')} · weak: ${weak}, reused: ${reused}, MFA: ${mfaState}`,
+        severity,
+        status: mfaState === 'Enabled' ? 'Monitoring' : 'Action Required',
+        owner: 'IAM Team',
+      }
+    })
+
+    const fallbackNarrative =
+      `O Keeper reporta score de segurança de ${securityScore}/100 para ${totalUsers.toLocaleString()} utilizadores monitorizados. ` +
+      `Foram identificadas ${weakPasswords.toLocaleString()} credenciais fracas e ${breachedPasswords.toLocaleString()} credenciais potencialmente comprometidas, com adoção de MFA em ${mfaAdoption.toFixed(1)}%. ` +
+      `A conformidade de política está em ${policyCompliance.toFixed(1)}%${lowestDept ? `; o departamento mais exposto é ${lowestDept.dept} (${Number(lowestDept.score).toFixed(1)}).` : '.'}`
+
+    const metrics: WeeklyMetric[] = [
+      {
+        label: 'Security Score',
+        value: `${securityScore}/100`,
+        delta: 'live data',
+        direction: 'flat',
+        positive: true,
+      },
+      {
+        label: 'Weak Passwords',
+        value: String(weakPasswords),
+        delta: 'live data',
+        direction: 'flat',
+        positive: weakPasswords < 100,
+      },
+      {
+        label: 'Breached Detected',
+        value: String(breachedPasswords),
+        delta: 'live data',
+        direction: 'flat',
+        positive: breachedPasswords === 0,
+      },
+      {
+        label: 'MFA Adoption',
+        value: `${mfaAdoption.toFixed(1)}%`,
+        delta: 'live data',
+        direction: 'flat',
+        positive: mfaAdoption >= 90,
+      },
+    ]
+
+    return {
+      ...staticReport,
+      platformLabel: 'Keeper · Password Security',
+      riskRating,
+      headline: aiHeadline ?? `Keeper posture this week: ${riskRating} based on credential hygiene and MFA adoption.`,
+      narrative: aiNarrative ?? fallbackNarrative,
+      metrics,
+      incidentRows: incidents,
+      preparedBy: 'SOC Operations — Identity & Access Team',
+      reviewedBy: 'Chief Information Security Officer',
+    }
+  }, [activePlatform, liveDashboard, staticReport, week.label, aiHeadline, aiNarrative])
+
+  const report = liveReport ?? keeperLiveReport ?? staticReport
 
   useEffect(() => {
-    if (activePlatform !== 'wazuh' || !liveDashboard) {
+    if ((activePlatform !== 'wazuh' && activePlatform !== 'keeper') || !liveDashboard) {
       setAiNarrative(null)
       setAiHeadline(null)
       return
     }
 
     const d = liveDashboard as Record<string, unknown>
+    const isWazuh = activePlatform === 'wazuh'
     const severity24h = (d.severityBreakdown24h as Array<{ severity: string; count: number }> | undefined) ?? []
     const agentsByOS = (d.agentsByOS as Array<{ os: string; count: number }> | undefined) ?? []
     const agentSummary = (d.agentSummary as { total?: number; active?: number } | undefined) ?? {}
     const alerts24hRaw = (d.alertVolume as Record<string, number> | undefined)?.['24h']
+
+    const keeperKpis = (d.kpis as Record<string, { value?: string | number }> | undefined) ?? {}
+    const keeperStrength = (d.passwordStrength as Array<{ name: string; value: number }> | undefined) ?? []
+    const keeperUsers = (d.highRiskUsers as Array<Record<string, unknown>> | undefined) ?? []
+
     const alerts24h = Number(alerts24hRaw ?? 0)
     const totalAgents = Number(agentSummary.total ?? 0)
     const activeAgents = Number(agentSummary.active ?? 0)
-    const coverage = totalAgents > 0 ? `${((activeAgents / totalAgents) * 100).toFixed(1)}%` : 'N/A'
-    const criticalAlerts = severity24h
+    const wazuhCoverage = totalAgents > 0 ? `${((activeAgents / totalAgents) * 100).toFixed(1)}%` : 'N/A'
+    const criticalAlertsWazuh = severity24h
       .filter((item) => item.severity === 'Critical' || item.severity === 'High')
       .reduce((sum, item) => sum + Number(item.count ?? 0), 0)
 
-    const incidents = ((d.recentAlerts as Array<Record<string, unknown>> | undefined) ?? []).slice(0, 8).map((alert, index) => ({
-      ref: String(alert.rule ?? `SIEM-${index + 1}`),
-      category: String(alert.groups ?? 'SIEM Alert'),
-      description: String(alert.description ?? 'Alerta de segurança'),
-      severity: String(alert.level ?? 'Medium'),
-      status: 'Monitoring',
-    }))
+    const weakPasswords = toNumber(keeperKpis.weakPasswords?.value)
+    const breachedPasswords = toNumber(keeperKpis.breachedPasswords?.value)
+    const keeperMfa = `${parsePercent(keeperKpis.mfaAdoption?.value).toFixed(1)}%`
+
+    const incidents = isWazuh
+      ? ((d.recentAlerts as Array<Record<string, unknown>> | undefined) ?? []).slice(0, 8).map((alert, index) => ({
+          ref: String(alert.rule ?? `SIEM-${index + 1}`),
+          category: String(alert.groups ?? 'SIEM Alert'),
+          description: String(alert.description ?? 'Alerta de segurança'),
+          severity: String(alert.level ?? 'Medium'),
+          status: 'Monitoring',
+        }))
+      : keeperUsers.slice(0, 8).map((user, index) => {
+          const risk = toNumber(user.riskScore)
+          return {
+            ref: String(user.id ?? `KPR-${index + 1}`),
+            category: 'Credential Risk',
+            description: `${String(user.user ?? 'User')} · weak: ${toNumber(user.weakCount)}, reused: ${toNumber(user.reusedCount)}`,
+            severity: risk >= 85 ? 'High' : risk >= 70 ? 'Medium' : 'Low',
+            status: String(user.mfaStatus ?? 'Monitoring') === 'Enabled' ? 'Monitoring' : 'Action Required',
+          }
+        })
+
+    const severityBreakdown = isWazuh
+      ? severity24h.map((item) => ({ name: item.severity, value: item.count }))
+      : keeperStrength.map((item) => ({ name: item.name, value: Number(item.value ?? 0) }))
 
     let cancelled = false
 
     generateSecurityNarrative({
-      platform: 'SIEM',
+      platform: isWazuh ? 'SIEM' : 'Keeper Password Security',
       client: 'CAP',
       period: 'Weekly',
       periodRange: week.label,
-      totalEndpoints: totalAgents,
-      activeDetections: alerts24h,
+      totalEndpoints: isWazuh ? totalAgents : toNumber(keeperKpis.totalUsers?.value),
+      activeDetections: isWazuh ? alerts24h : weakPasswords,
       resolvedIncidents: 0,
       openIncidents: incidents.length,
       mttr: 'N/A',
-      coverage,
-      criticalAlerts,
-      riskRating: criticalAlerts > 0 ? 'Moderate' : 'Stable',
-      severityBreakdown: severity24h.map((item) => ({ name: item.severity, value: item.count })),
-      endpointsByOS: agentsByOS,
+      coverage: isWazuh ? wazuhCoverage : keeperMfa,
+      criticalAlerts: isWazuh ? criticalAlertsWazuh : breachedPasswords,
+      riskRating: isWazuh
+        ? (criticalAlertsWazuh > 0 ? 'Moderate' : 'Stable')
+        : (breachedPasswords > 0 ? 'Elevated' : 'Stable'),
+      severityBreakdown,
+      endpointsByOS: isWazuh ? agentsByOS : undefined,
       incidents,
     })
       .then((text) => {

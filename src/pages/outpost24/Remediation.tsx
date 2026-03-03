@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Wrench, CheckCircle2, Clock, AlertTriangle, Users, Sparkles, Loader2, RefreshCw, ShieldAlert, ChevronDown, ChevronUp, ExternalLink, Wifi, WifiOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PageLayout } from '@/layouts/PageLayout'
@@ -6,43 +6,114 @@ import { MetricCard } from '@/components/cards/MetricCard'
 import { AreaChartWidget } from '@/components/charts/AreaChartWidget'
 import { PieChartWidget } from '@/components/charts/PieChartWidget'
 import { DataTable } from '@/components/tables/DataTable'
-import { generateTimeSeries, tsDays, r } from '@/data/mockHelpers'
 import { outpost24Dashboard } from '@/data/outpost24/dashboard'
 import { useDashboard } from '@/hooks/useDashboard'
 import { generateRemediationPlan, generateCVERemediationSteps, type RemediationRecommendation, type CVERemediationGuide } from '@/lib/openai'
 
-// ─── Static mock tasks ────────────────────────────────────────────────────────
-const analysts = ['J. Mwangi', 'A. Odhiambo', 'P. Njoroge', 'S. Kamau', 'L. Otieno']
-const priorities: Array<'P1' | 'P2' | 'P3' | 'P4'> = ['P1', 'P2', 'P2', 'P3', 'P3', 'P4']
-const taskStatuses = ['Open', 'In Progress', 'Verified', 'Closed', 'Open', 'In Progress', 'Open']
-const cvePool = outpost24Dashboard.topCVEs.map(c => c.cveId)
-const assetPool = ['prod-web-01', 'db-srv-02', 'corp-ws-14', 'dmz-fw-01', 'cloud-lb-03', 'iot-hub-07', 'vpn-gw-02']
+const ASSIGNEES = ['SecOps Team', 'Vuln Mgmt Team', 'Infra Team', 'SOC Team', 'Platform Team']
 
-const tasks = Array.from({ length: 22 }, (_, i) => ({
-  id:       `REM-${String(200 + i).padStart(4, '0')}`,
-  cveId:    cvePool[i % cvePool.length],
-  asset:    assetPool[i % assetPool.length],
-  priority: priorities[i % priorities.length],
-  assignee: analysts[i % analysts.length],
-  status:   taskStatuses[i % taskStatuses.length],
-  dueDate:  tsDays(-(r(1, 14))),
-  created:  tsDays(r(1, 30)),
-  effort:   `${r(1, 8)}h`,
-}))
+type TaskRow = {
+  id: string
+  cveId: string
+  asset: string
+  priority: 'P1' | 'P2' | 'P3' | 'P4'
+  assignee: string
+  status: 'Open' | 'In Progress' | 'Verified' | 'Closed'
+  dueDate: string
+  created: string
+  effort: string
+}
 
-const remVelocity = generateTimeSeries(14, 18, 8)
+function fmtShortDate(value: string | number | Date): string {
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return String(value)
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
-const statusPie = [
-  { name: 'Open',        value: tasks.filter(t => t.status === 'Open').length,        color: '#EF4444' },
-  { name: 'In Progress', value: tasks.filter(t => t.status === 'In Progress').length, color: '#F97316' },
-  { name: 'Verified',    value: tasks.filter(t => t.status === 'Verified').length,    color: '#3B82F6' },
-  { name: 'Closed',      value: tasks.filter(t => t.status === 'Closed').length,      color: '#22C55E' },
-]
+function mapPriority(score: number): TaskRow['priority'] {
+  if (score >= 9) return 'P1'
+  if (score >= 8) return 'P2'
+  if (score >= 7) return 'P3'
+  return 'P4'
+}
 
-const closedCount     = tasks.filter(t => t.status === 'Closed').length
-const openCount       = tasks.filter(t => t.status === 'Open').length
-const inProgressCount = tasks.filter(t => t.status === 'In Progress').length
-const completionPct   = Math.round((closedCount / tasks.length) * 100)
+function mapStatus(status: string): TaskRow['status'] {
+  const s = (status || '').toLowerCase()
+  if (s === 'patched') return 'Closed'
+  if (s === 'mitigated') return 'Verified'
+  if (s === 'accepted') return 'In Progress'
+  return 'Open'
+}
+
+function buildRemediationTasks(d: typeof outpost24Dashboard): TaskRow[] {
+  const cves = (d.topCVEs || []).slice(0, 22)
+  const assets = d.assetRiskRankings || []
+  const now = new Date()
+  return cves.map((cve, idx) => {
+    const priority = mapPriority(Number(cve.score))
+    const status = mapStatus(String(cve.status))
+    const dueDays = priority === 'P1' ? 2 : priority === 'P2' ? 5 : priority === 'P3' ? 8 : 12
+    const dueDate = new Date(now)
+    dueDate.setDate(now.getDate() + dueDays)
+    const effortHours = Math.min(8, Math.max(1, Math.ceil(Number(cve.affected) / 6)))
+    const asset = assets[idx % Math.max(assets.length, 1)]
+    return {
+      id: `REM-${String(200 + idx).padStart(4, '0')}`,
+      cveId: cve.cveId,
+      asset: asset?.asset || asset?.ip || `asset-${idx + 1}`,
+      priority,
+      assignee: ASSIGNEES[idx % ASSIGNEES.length],
+      status,
+      dueDate: fmtShortDate(dueDate),
+      created: fmtShortDate(cve.published),
+      effort: `${effortHours}h`,
+    }
+  })
+}
+
+function buildBaseRecommendations(d: typeof outpost24Dashboard): RemediationRecommendation[] {
+  const top = [...(d.topCVEs || [])].sort((a, b) => Number(b.score) - Number(a.score)).slice(0, 4)
+  return top.map((cve, idx) => {
+    const urgency: RemediationRecommendation['urgency'] =
+      Number(cve.score) >= 9 ? 'Critical' : Number(cve.score) >= 8 ? 'High' : 'Medium'
+    return {
+      priority: idx + 1,
+      title: `Remediar ${cve.product} (${cve.cveId})`,
+      cveId: cve.cveId,
+      rationale: `CVSS ${cve.score} com ${cve.affected} ativos afetados no ambiente Outpost24. Priorização baseada em dados reais coletados da API.`,
+      steps: [
+        `Identificar ativos impactados por ${cve.cveId} no inventário e validar exposição externa.`,
+        `Aplicar patch/mitigação oficial do fornecedor para ${cve.product} na janela de mudança apropriada.`,
+        'Executar nova varredura de validação e atualizar o status da remediação no CAP Dash.',
+      ],
+      urgency,
+    }
+  })
+}
+
+function buildGuideFallback(cve: { cveId: string; product: string; score: number }): CVERemediationGuide {
+  const severity: CVERemediationGuide['severity'] =
+    cve.score >= 9 ? 'Critical' : cve.score >= 7 ? 'High' : cve.score >= 4 ? 'Medium' : 'Low'
+  return {
+    cveId: cve.cveId,
+    product: cve.product,
+    score: cve.score,
+    severity,
+    summary: `${cve.cveId} afeta ${cve.product} e deve ser tratada conforme criticidade e exposição dos ativos impactados.`,
+    steps: [
+      `Confirmar versão e exposição dos ativos afetados por ${cve.cveId}.`,
+      'Baixar e validar patch/hotfix oficial do fornecedor em ambiente controlado.',
+      'Aplicar correção em produção com janela aprovada e plano de rollback.',
+      'Reforçar controles compensatórios temporários (segmentação, ACL, hardening) até conclusão total.',
+      'Executar nova varredura e registrar evidências de correção no processo de mudança.',
+    ],
+    verification: `A remediação é confirmada quando ${cve.cveId} não aparece mais nas varreduras e o risco do ativo é reduzido.`,
+    references: [
+      `https://nvd.nist.gov/vuln/detail/${cve.cveId}`,
+      `https://www.google.com/search?q=${encodeURIComponent(cve.product + ' ' + cve.cveId + ' advisory')}`,
+    ],
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function priorityColor(p: string): string {
@@ -238,60 +309,6 @@ function CVEGuideCard({ guide }: { guide: CVERemediationGuide }) {
   )
 }
 
-// ─── Default static recommendations shown before AI runs ─────────────────────
-const defaultRecs: RemediationRecommendation[] = [
-  {
-    priority: 1,
-    title: 'Corrigir FortiOS CVE-2024-21762 imediatamente',
-    cveId: 'CVE-2024-21762',
-    rationale: 'CVSS 9.8 com 34 ativos impactados — esta é a vulnerabilidade de maior exposição no ambiente e está sendo explorada ativamente.',
-    steps: [
-      'Identificar todos os appliances FortiOS com versões < 7.4.3 usando o inventário de ativos.',
-      'Aplicar o patch do fabricante Fortinet advisory FG-IR-24-015 na próxima janela de manutenção.',
-      'Verificar a aplicação do patch com uma varredura pós-remediação e fechar as tarefas REM vinculadas a esta CVE.',
-    ],
-    urgency: 'Critical',
-  },
-  {
-    priority: 2,
-    title: 'Isolar e corrigir hosts ConnectWise ScreenConnect',
-    cveId: 'CVE-2024-1709',
-    rationale: 'CVSS 10.0 permite RCE sem autenticação; 28 ativos afetados incluindo servidores web no cluster de produção.',
-    steps: [
-      'Bloquear acesso externo às portas do ScreenConnect (8040/8041) no firewall de perímetro imediatamente.',
-      'Atualizar o ScreenConnect para v23.9.8+ em todos os servidores afetados.',
-      'Rotacionar todas as credenciais nos hosts onde o ScreenConnect estava acessível da internet.',
-    ],
-    urgency: 'Critical',
-  },
-  {
-    priority: 3,
-    title: 'Remediar servidores de banco de dados e web de alto risco',
-    cveId: 'Múltiplos',
-    rationale: 'Ativos com score de risco ≥ 80 (faixa Crítica) possuem 3-5 CVEs críticas não corrigidas cada e representam o maior risco de movimentação lateral.',
-    steps: [
-      'Executar varreduras autenticadas nos 5 ativos com maior score de risco para confirmar caminhos exploráveis.',
-      'Aplicar todos os patches de segurança pendentes via WSUS/Ansible em até 72 horas.',
-      'Validar com uma nova varredura direcionada e atualizar os status na tabela do CAP Dash.',
-    ],
-    urgency: 'High',
-  },
-  {
-    priority: 4,
-    title: 'Melhorar conformidade de patches de 76.4% para ≥ 90%',
-    cveId: 'Múltiplos',
-    rationale: 'A conformidade de patches está em 76.4% — abaixo do limite de 90% exigido pela maioria dos frameworks de segurança (CIS, ISO 27001).',
-    steps: [
-      'Identificar os 23.6% de ativos não conformes e categorizar por SO/grupo de patch.',
-      'Agendar ciclos de patching automatizados semanalmente usando sua ferramenta de gestão de patches.',
-      'Acompanhar a tendência de conformidade no dashboard de Risk Scoring e atingir 90% em 30 dias.',
-    ],
-    urgency: 'Medium',
-  },
-]
-
-type TaskRow = typeof tasks[number]
-
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Remediation() {
   // Live data from backend API — falls back to static mock if API is unavailable
@@ -299,7 +316,24 @@ export default function Remediation() {
   const d = apiData ?? outpost24Dashboard
   const isLive = apiData !== null && !apiError
 
-  const [aiRecs, setAiRecs] = useState<RemediationRecommendation[]>(defaultRecs)
+  const tasks = useMemo(() => buildRemediationTasks(d), [d])
+  const remVelocity = useMemo(
+    () => (d.findingsTrend || []).map((row) => ({ time: row.time, value: Math.max(0, Math.round(Number(row.value) * 0.35)) })),
+    [d],
+  )
+  const statusPie = useMemo(() => [
+    { name: 'Open', value: tasks.filter((t) => t.status === 'Open').length, color: '#EF4444' },
+    { name: 'In Progress', value: tasks.filter((t) => t.status === 'In Progress').length, color: '#F97316' },
+    { name: 'Verified', value: tasks.filter((t) => t.status === 'Verified').length, color: '#3B82F6' },
+    { name: 'Closed', value: tasks.filter((t) => t.status === 'Closed').length, color: '#22C55E' },
+  ], [tasks])
+  const closedCount = tasks.filter((t) => t.status === 'Closed').length
+  const openCount = tasks.filter((t) => t.status === 'Open').length
+  const inProgressCount = tasks.filter((t) => t.status === 'In Progress').length
+  const completionPct = tasks.length ? Math.round((closedCount / tasks.length) * 100) : 0
+  const baseRecs = useMemo(() => buildBaseRecommendations(d), [d])
+
+  const [aiRecs, setAiRecs] = useState<RemediationRecommendation[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isAI, setIsAI] = useState(false)
@@ -307,6 +341,12 @@ export default function Remediation() {
   const [cveGuides, setCveGuides] = useState<CVERemediationGuide[] | null>(null)
   const [guidesLoading, setGuidesLoading] = useState(false)
   const [guidesError, setGuidesError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isAI) {
+      setAiRecs(baseRecs)
+    }
+  }, [baseRecs, isAI])
 
   const handleGenerateAI = useCallback(async () => {
     setLoading(true)
@@ -345,26 +385,46 @@ export default function Remediation() {
   }, [apiData])
 
   const handleReset = useCallback(() => {
-    setAiRecs(defaultRecs)
+    setAiRecs(baseRecs)
     setIsAI(false)
     setError(null)
-  }, [])
+  }, [baseRecs])
 
   const handleGenerateGuides = useCallback(async () => {
     setGuidesLoading(true)
     setGuidesError(null)
     try {
-      const guides = await generateCVERemediationSteps(
-        d.topCVEs.map(c => ({
-          cveId:    c.cveId,
-          score:    c.score,
-          affected: c.affected,
-          product:  c.product,
-        }))
-      )
-      setCveGuides(guides)
+      const sourceCVEs = d.topCVEs.map((c) => ({
+        cveId: c.cveId,
+        score: Number(c.score),
+        affected: Number(c.affected),
+        product: c.product,
+      }))
+      const allowed = new Map(sourceCVEs.map((c) => [c.cveId, c]))
+      const aiGuides = await generateCVERemediationSteps(sourceCVEs)
+
+      const normalized: CVERemediationGuide[] = aiGuides
+        .filter((g) => allowed.has(g.cveId))
+        .map((g) => {
+          const src = allowed.get(g.cveId)!
+          return {
+            ...g,
+            product: src.product,
+            score: src.score,
+            severity: src.score >= 9 ? 'Critical' : src.score >= 7 ? 'High' : src.score >= 4 ? 'Medium' : 'Low',
+          }
+        })
+
+      const existing = new Set(normalized.map((g) => g.cveId))
+      const missingFallbacks = sourceCVEs
+        .filter((c) => !existing.has(c.cveId))
+        .map((c) => buildGuideFallback(c))
+
+      setCveGuides([...normalized, ...missingFallbacks])
     } catch (err) {
       setGuidesError(err instanceof Error ? err.message : 'Unknown error occurred')
+      const fallbackGuides = d.topCVEs.map((c) => buildGuideFallback({ cveId: c.cveId, product: c.product, score: Number(c.score) }))
+      setCveGuides(fallbackGuides)
     } finally {
       setGuidesLoading(false)
     }
@@ -446,7 +506,7 @@ export default function Remediation() {
           <span>{inProgressCount} em progresso</span>
           <span>{openCount} abertas</span>
           <span className="ml-auto flex items-center gap-1.5">
-            <Users size={12} /> {analysts.length} responsáveis
+            <Users size={12} /> {ASSIGNEES.length} responsáveis
           </span>
         </div>
       </div>

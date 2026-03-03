@@ -76,6 +76,20 @@ def get_dashboard(platform_id: str) -> dict:
             except Exception as e:
                 logger.warning("Wazuh SIEM live fetch failed, falling back to mock: %s", e)
 
+    if platform_id == "keeper":
+        from app.config import settings
+        if settings.keeper_email and settings.keeper_password:
+            try:
+                from app.integrations.keeper import keeper_client
+                if keeper_client is not None:
+                    return keeper_client.fetch_dashboard(mock)
+                from app.integrations.keeper import _unavailable_payload
+                return _unavailable_payload(settings.keeper_client_filter, "Keeper client failed to initialize")
+            except Exception as e:
+                logger.warning("Keeper live fetch failed: %s", e)
+                from app.integrations.keeper import _unavailable_payload
+                return _unavailable_payload(settings.keeper_client_filter, str(e))
+
     return mock
 
 

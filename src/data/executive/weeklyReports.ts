@@ -126,37 +126,6 @@ const REPORTS: Record<PlatformId, PlatformWeeklyReport> = {
     reviewedBy: 'Chief Information Security Officer',
   },
 
-  safetica: {
-    platformLabel: 'Safetica · Data Loss Prevention',
-    riskRating: 'Elevated',
-    headline: 'DLP engine blocked 28 unauthorized transfers; 9 high-risk users identified requiring immediate review.',
-    narrative:
-      'The organization\'s data loss prevention platform monitored 12,483 outbound data transfer events this week, successfully blocking 28 policy violations before exfiltration could occur. ' +
-      'Nine users have been flagged as high-risk based on repeated sensitive data movement patterns across unapproved channels, including USB removable media and personal cloud storage uploads. ' +
-      'Fourteen policy violations were formally logged, representing a 2-event improvement over the prior period; however, the volume of sensitive file movements involving PII and financial data remains above acceptable baseline thresholds. ' +
-      'Risk posture is rated Elevated and immediate review of flagged user accounts is recommended to the CISO.',
-    metrics: [
-      { label: 'Transfers Monitored', value: '12,483', delta: '+340 vs prior', direction: 'up',   positive: false },
-      { label: 'Blocked Transfers',   value: '28',     delta: '+6 blocked',    direction: 'up',   positive: true },
-      { label: 'Policy Violations',   value: '14',     delta: '–2 vs prior',   direction: 'down', positive: true },
-      { label: 'Users at Risk',       value: '9',      delta: '+3 flagged',    direction: 'up',   positive: false },
-    ],
-    recommendations: [
-      'Initiate HR-led review of the 9 flagged high-risk users and suspend USB data transfer rights pending investigation.',
-      'Update DLP classification engine to include new financial quarter document templates currently not captured in policy scope.',
-      'Brief department managers on acceptable use policies, with emphasis on cloud upload channels showing the highest violation rate.',
-    ],
-    incidentRows: [
-      { ref: 'DLP-2024-0114', date: format(subWeeks(new Date(), 0), 'MMM d'), category: 'PII Exposure', description: 'Employee HR records uploaded to personal cloud storage', severity: 'Critical', status: 'Blocked', owner: 'K. Sharma' },
-      { ref: 'DLP-2024-0113', date: format(subWeeks(new Date(), 0), 'MMM d'), category: 'Financial Data', description: 'Q4 financial projections transferred to USB device', severity: 'High', status: 'Blocked', owner: 'N. Williams' },
-      { ref: 'DLP-2024-0112', date: format(subWeeks(new Date(), 0), 'MMM d'), category: 'IP Transfer', description: 'Source code repository copied to external storage', severity: 'Critical', status: 'Investigating', owner: 'K. Sharma' },
-      { ref: 'DLP-2024-0111', date: format(subWeeks(new Date(), 0), 'MMM d'), category: 'Email Exfil', description: 'Customer database extract sent via personal email', severity: 'High', status: 'Blocked', owner: 'N. Williams' },
-      { ref: 'DLP-2024-0110', date: format(subWeeks(new Date(), 0), 'MMM d'), category: 'Print / Copy', description: 'Bulk print of sensitive client contracts (unregistered device)', severity: 'Medium', status: 'Logged', owner: 'T. Ferreira' },
-    ],
-    preparedBy: 'SOC Operations — DLP Team',
-    reviewedBy: 'Chief Information Security Officer',
-  },
-
   outpost24: {
     platformLabel: 'Outpost24 · Vulnerability Management',
     riskRating: 'Moderate',

@@ -1,12 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ShieldAlert, AlertTriangle, Activity, Loader2, Wifi, WifiOff, Bot, Send, Sparkles, User, CheckCircle2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { ShieldAlert, AlertTriangle, Activity, Loader2, Wifi, WifiOff, Bot, Send, Sparkles, User, CheckCircle2, Trash2, Copy, Check, MessageSquare } from 'lucide-react'
 import { PageLayout } from '@/layouts/PageLayout'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { DataTable } from '@/components/tables/DataTable'
 import { api } from '@/lib/api'
 import type { PlatformId } from '@/types'
+import {
+  collectExecutivePlatformIntel,
+  EXECUTIVE_PLATFORM_IDS,
+  EXECUTIVE_PLATFORM_LABELS,
+  type DashboardMap,
+} from '@/lib/executiveAgent'
 
 type Severity = 'Critical' | 'High'
+
+interface SeverityCounters {
+  critical: number
+  high: number
+  realCritical: number
+  realHigh: number
+  mockCritical: number
+  mockHigh: number
+}
+
+const SCORE_PLATFORM_IDS: PlatformId[] = ['crowdstrike', 'outpost24', 'keeper']
 
 interface ExecutiveEvent {
   id: string
@@ -23,24 +40,6 @@ interface ChatMessage {
   content: string
   createdAt: number
 }
-
-type DashboardMap = Partial<Record<PlatformId, Record<string, unknown>>>
-
-const PLATFORM_IDS: PlatformId[] = ['crowdstrike', 'wazuh', 'safetica', 'outpost24', 'keeper', 'zabbix']
-
-const REAL_PLATFORMS: PlatformId[] = ['crowdstrike', 'wazuh', 'outpost24', 'zabbix']
-const MOCK_PLATFORMS: PlatformId[] = ['keeper', 'safetica']
-
-const PLATFORM_LABELS: Record<PlatformId, string> = {
-  crowdstrike: 'CrowdStrike (EDR)',
-  wazuh: 'SIEM',
-  outpost24: 'Outpost24 (VM)',
-  zabbix: 'Zabbix (Infra)',
-  keeper: 'Keeper (Passwords)',
-  safetica: 'Safetica (DLP)',
-}
-
-type DataSourceType = 'live' | 'mock' | 'offline'
 
 function toNumber(value: unknown): number {
   if (typeof value === 'number') return value
@@ -81,6 +80,97 @@ function securityScoreColor(score: number): string {
   return '#EF4444'
 }
 
+/** Lightweight markdown-like renderer for chat messages */
+function renderMarkdown(text: string): React.ReactNode[] {
+  const lines = text.split('\n')
+  const elements: React.ReactNode[] = []
+  let listItems: React.ReactNode[] = []
+  let listKey = 0
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={`ul-${listKey++}`} className="flex flex-col gap-0.5 ml-1 my-1">
+          {listItems}
+        </ul>
+      )
+      listItems = []
+    }
+  }
+
+  const formatInline = (str: string): React.ReactNode[] => {
+    const parts: React.ReactNode[] = []
+    // Regex for **bold**, `code`, and plain text
+    const regex = /(\*\*(.+?)\*\*)|(`(.+?)`)/g
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+
+    while ((match = regex.exec(str)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(str.slice(lastIndex, match.index))
+      }
+      if (match[2]) {
+        parts.push(<strong key={`b-${match.index}`} style={{ color: '#E2E8F0', fontWeight: 600 }}>{match[2]}</strong>)
+      } else if (match[4]) {
+        parts.push(<code key={`c-${match.index}`} className="text-[12px] px-1 py-0.5 rounded" style={{ background: '#334155', color: '#93C5FD' }}>{match[4]}</code>)
+      }
+      lastIndex = match.index + match[0].length
+    }
+    if (lastIndex < str.length) {
+      parts.push(str.slice(lastIndex))
+    }
+    return parts.length > 0 ? parts : [str]
+  }
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim()
+
+    if (trimmed === '') {
+      flushList()
+      elements.push(<div key={`br-${idx}`} className="h-1.5" />)
+      return
+    }
+
+    // Bullet list items: "- text" or "• text"
+    const bulletMatch = trimmed.match(/^[-•]\s+(.+)$/)
+    if (bulletMatch) {
+      listItems.push(
+        <li key={`li-${idx}`} className="flex items-start gap-1.5 text-[12.5px] leading-relaxed" style={{ color: '#CBD5E1' }}>
+          <span className="text-[8px] mt-1.5 flex-shrink-0" style={{ color: '#60A5FA' }}>●</span>
+          <span>{formatInline(bulletMatch[1])}</span>
+        </li>
+      )
+      return
+    }
+
+    // Numbered list: "1. text", "2. text"
+    const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)$/)
+    if (numberedMatch) {
+      listItems.push(
+        <li key={`li-${idx}`} className="flex items-start gap-1.5 text-[12.5px] leading-relaxed" style={{ color: '#CBD5E1' }}>
+          <span className="text-[11px] font-bold flex-shrink-0" style={{ color: '#818CF8' }}>{numberedMatch[1]}.</span>
+          <span>{formatInline(numberedMatch[2])}</span>
+        </li>
+      )
+      return
+    }
+
+    flushList()
+    elements.push(
+      <p key={`p-${idx}`} className="text-[12.5px] leading-relaxed" style={{ color: '#E2E8F0' }}>
+        {formatInline(trimmed)}
+      </p>
+    )
+  })
+
+  flushList()
+  return elements
+}
+
+function formatChatTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
 function isCompanyScopedQuestion(question: string): boolean {
   const q = question.toLowerCase()
 
@@ -91,7 +181,7 @@ function isCompanyScopedQuestion(question: string): boolean {
     'risco', 'risk', 'score', 'pontuacao', 'pontuação', 'percentual', 'percentagem',
     'incidente', 'incidentes', 'alerta', 'alertas', 'deteccao', 'detecção',
     'vulnerabilidade', 'vulnerabilidades', 'compliance', 'conformidade',
-    'wazuh', 'siem', 'crowdstrike', 'outpost24', 'safetica', 'keeper', 'zabbix',
+    'wazuh', 'siem', 'crowdstrike', 'outpost24', 'keeper', 'zabbix',
     'endpoint', 'endpoints', 'host', 'hosts', 'agente', 'agentes',
   ]
 
@@ -124,11 +214,70 @@ function parsePercent(value: unknown): number {
   return 0
 }
 
+function normalizeSeverity(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase()
+}
+
+function countFromCrowdstrike(data: Record<string, unknown> | undefined): { critical: number; high: number } {
+  if (!data) return { critical: 0, high: 0 }
+
+  // Use recentDetections as primary source — reflects current active state
+  const detections = (data.recentDetections as Array<Record<string, unknown>> | undefined) ?? []
+  if (detections.length > 0) {
+    const critical = detections.filter((d) => normalizeSeverity(d.severity) === 'critical').length
+    const high = detections.filter((d) => normalizeSeverity(d.severity) === 'high').length
+    return { critical, high }
+  }
+
+  // Fallback: use incidents/alerts count from kpis if available
+  const kpis = data.kpis as Record<string, { value?: unknown }> | undefined
+  if (kpis) {
+    const incidentsCritical = toNumber(kpis.criticalIncidents?.value ?? 0)
+    const incidentsHigh = toNumber(kpis.highIncidents?.value ?? 0)
+    if (incidentsCritical > 0 || incidentsHigh > 0) {
+      return { critical: incidentsCritical, high: incidentsHigh }
+    }
+  }
+
+  return { critical: 0, high: 0 }
+}
+
+function countFromOutpost24(data: Record<string, unknown> | undefined): { critical: number; high: number } {
+  if (!data) return { critical: 0, high: 0 }
+  const cves = (data.topCVEs as Array<Record<string, unknown>> | undefined) ?? []
+  let critical = 0
+  let high = 0
+
+  cves.forEach((cve) => {
+    const score = toNumber(cve.score)
+    if (score >= 9) critical += 1
+    else if (score >= 8.5) high += 1
+  })
+
+  return { critical, high }
+}
+
+function countFromKeeper(data: Record<string, unknown> | undefined): { critical: number; high: number } {
+  if (!data) return { critical: 0, high: 0 }
+  const users = (data.highRiskUsers as Array<Record<string, unknown>> | undefined) ?? []
+  let critical = 0
+  let high = 0
+
+  users.forEach((u) => {
+    const risk = toNumber(u.riskScore)
+    if (risk >= 92) critical += 1
+    else if (risk >= 85) high += 1
+  })
+
+  return { critical, high }
+}
+
 async function askExecutiveAssistant(params: {
   question: string
   context: Record<string, unknown>
+  conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
 }): Promise<string> {
-  const { question, context } = params
+  const { question, context, conversationHistory = [] } = params
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined
 
   if (!isCompanyScopedQuestion(question)) {
@@ -144,46 +293,172 @@ async function askExecutiveAssistant(params: {
 
   if (asksScoreReason || asksImprove) {
     const lines: string[] = []
-    lines.push(`Score atual CAP: ${String(context.securityScore ?? 'N/A')}/100 (${String(context.securityLevel ?? 'N/A')}).`)
+    lines.push(`**Score atual CAP:** ${String(context.securityScore ?? 'N/A')}/100 (${String(context.securityLevel ?? 'N/A')})`)
     if (asksScoreReason && scoreBreakdown.length) {
-      lines.push('Base do cálculo:')
-      scoreBreakdown.slice(0, 4).forEach((item) => {
-        lines.push(`- ${item.factor} (${item.weight}): ${item.value} • fonte: ${item.source}`)
+      lines.push('\n**Base do cálculo:**')
+      scoreBreakdown.slice(0, 5).forEach((item) => {
+        lines.push(`- **${item.factor}** (${item.weight}): ${item.value} — fonte: ${item.source}`)
       })
     }
     if (asksImprove && recommendations.length) {
-      lines.push('Como melhorar o percentual:')
+      lines.push('\n**Como melhorar o percentual:**')
       recommendations.slice(0, 3).forEach((item) => {
-        lines.push(`- ${item.action} (ganho estimado: ${item.expectedGain}) • base: ${item.basedOn}`)
+        lines.push(`- **${item.action}** (ganho estimado: ${item.expectedGain}) — base: ${item.basedOn}`)
       })
     }
     return lines.join('\n')
   }
 
+  // --- Local handler: platform status questions ---
+  const asksPlatforms = /plataforma|platform|online|offline|simulad|integra|conexão|conectad|fonte|dados reais/.test(q)
+  if (asksPlatforms) {
+    const ds = context.platformDataSources as { live?: string[]; mock?: string[]; offline?: string[] } | undefined
+    const lines: string[] = []
+    lines.push(`**Status das plataformas CAP:**`)
+    if (ds?.live?.length) lines.push(`- **Dados reais (${ds.live.length}):** ${ds.live.join(', ')}`)
+    if (ds?.mock?.length) lines.push(`- **Dados simulados (${ds.mock.length}):** ${ds.mock.join(', ')}`)
+    if (ds?.offline?.length) lines.push(`- **Offline (${ds.offline.length}):** ${ds.offline.join(', ')}`)
+    lines.push(`\nTotal monitoradas: **${Number(context.monitoredPlatforms ?? 0)}** | Score calculado com: **${Number(context.realDataPlatforms ?? 0)}/${SCORE_PLATFORM_IDS.length}** plataformas reais.`)
+    return lines.join('\n')
+  }
+
+  // --- Local handler: events/incidents questions ---
+  const asksEvents = /evento|incidente|alerta|detec[çc]|crític|alto|high|critical|quantos/.test(q)
+  if (asksEvents) {
+    const topEvents = (context.topEvents as Array<{ platform: string; severity: string; event: string; details: string }>) ?? []
+    const lines: string[] = []
+    lines.push(`**Eventos de segurança da CAP:**`)
+    lines.push(`- **${Number(context.criticalEvents ?? 0)}** eventos críticos (${Number(context.realCritical ?? 0)} reais, ${Number(context.mockCritical ?? 0)} simulados)`)
+    lines.push(`- **${Number(context.highEvents ?? 0)}** eventos altos (${Number(context.realHigh ?? 0)} reais, ${Number(context.mockHigh ?? 0)} simulados)`)
+    if (topEvents.length > 0) {
+      lines.push(`\n**Top eventos mais graves:**`)
+      topEvents.slice(0, 5).forEach((ev) => {
+        lines.push(`- **${ev.platform}** [${ev.severity}]: ${ev.event} — ${ev.details}`)
+      })
+    }
+    return lines.join('\n')
+  }
+
+  // --- Local handler: priority / next actions questions ---
+  const asksPriority = /prioridade|próxim|ação|ações|o que fazer|recomend|urgente|imediato|24 hora|plano/.test(q)
+  if (asksPriority && recommendations.length) {
+    const topEvents = (context.topEvents as Array<{ platform: string; severity: string; event: string }>) ?? []
+    const lines: string[] = []
+    lines.push(`**Prioridades de ação para a CAP:**\n`)
+    recommendations.slice(0, 4).forEach((item, idx) => {
+      lines.push(`**${idx + 1}.** ${item.action}\n   Ganho estimado: **${item.expectedGain}** | Base: ${item.basedOn}`)
+    })
+    if (topEvents.length > 0) {
+      lines.push(`\n**Eventos mais urgentes para tratar agora:**`)
+      topEvents.filter(ev => ev.severity === 'Critical').slice(0, 3).forEach((ev) => {
+        lines.push(`- **${ev.platform}**: ${ev.event}`)
+      })
+    }
+    return lines.join('\n')
+  }
+
+  // --- Local handler: correlation (SIEM + EDR) questions ---
+  const asksCorrelation = /correla[çc]|siem.*edr|edr.*siem|wazuh.*crowdstrike|crowdstrike.*wazuh|cruzar|cruzamento|entre.*plataforma/.test(q)
+  if (asksCorrelation) {
+    const topEvents = (context.topEvents as Array<{ platform: string; severity: string; event: string; details: string }>) ?? []
+    const csEvents = topEvents.filter(e => e.platform.toLowerCase().includes('crowdstrike'))
+    const wzEvents = topEvents.filter(e => e.platform.toLowerCase().includes('wazuh'))
+    const lines: string[] = []
+    lines.push(`**Correlação entre plataformas CAP:**\n`)
+    lines.push(`**CrowdStrike (EDR):** ${csEvents.length} eventos graves`)
+    csEvents.slice(0, 3).forEach(e => lines.push(`  - [${e.severity}] ${e.event}`))
+    lines.push(`\n**Wazuh (SIEM):** ${wzEvents.length} eventos graves`)
+    wzEvents.slice(0, 3).forEach(e => lines.push(`  - [${e.severity}] ${e.event}`))
+    if (csEvents.length > 0 && wzEvents.length > 0) {
+      lines.push(`\n**Análise:** Presença simultânea de alertas em EDR e SIEM indica possível atividade maliciosa persistente. Recomenda-se investigar se os hosts afetados no CrowdStrike coincidem com os alertas do Wazuh.`)
+    } else if (csEvents.length === 0 && wzEvents.length === 0) {
+      lines.push(`\nAmbas plataformas sem eventos graves no momento — boa postura.`)
+    }
+    return lines.join('\n')
+  }
+
+  // --- Local handler: specific platform questions ---
+  const asksCrowdstrike = /crowdstrike|edr|falcon|endpoint/.test(q) && !/siem|wazuh|correla/.test(q)
+  const asksWazuh = /wazuh|siem/.test(q) && !/crowdstrike|edr|correla/.test(q)
+  const asksOutpost = /outpost|vulnerabilidade|cve|patch/.test(q)
+  const asksKeeper = /keeper|senha|password|credencial/.test(q)
+  const asksZabbix = /zabbix|infra|monitoramento|uptime/.test(q)
+
+  if (asksCrowdstrike || asksWazuh || asksOutpost || asksKeeper || asksZabbix) {
+    const platformSummary = (context.platformSummary ?? {}) as Record<string, Record<string, unknown>>
+    const topEvents = (context.topEvents as Array<{ platform: string; severity: string; event: string; details: string }>) ?? []
+    const ds = context.platformDataSources as { live?: string[]; mock?: string[]; offline?: string[] } | undefined
+    let platformName = ''
+    let platformKey = ''
+
+    if (asksCrowdstrike) { platformName = 'CrowdStrike (EDR)'; platformKey = 'crowdstrike' }
+    else if (asksWazuh) { platformName = 'Wazuh (SIEM)'; platformKey = 'wazuh' }
+    else if (asksOutpost) { platformName = 'Outpost24 (Vuln Mgmt)'; platformKey = 'outpost24' }
+    else if (asksKeeper) { platformName = 'Keeper (Password Mgmt)'; platformKey = 'keeper' }
+    else if (asksZabbix) { platformName = 'Zabbix (Infra)'; platformKey = 'zabbix' }
+
+    const isLive = ds?.live?.some(p => p.toLowerCase().includes(platformKey))
+    const isMock = ds?.mock?.some(p => p.toLowerCase().includes(platformKey))
+    const dataStatus = isLive ? '✅ Dados reais' : isMock ? '⚠️ Dados simulados' : '❌ Offline'
+
+    const platEvents = topEvents.filter(e => e.platform.toLowerCase().includes(platformKey))
+    const summary = platformSummary[platformKey]
+
+    const lines: string[] = []
+    lines.push(`**${platformName}** — ${dataStatus}\n`)
+
+    if (summary) {
+      const summaryEntries = Object.entries(summary).slice(0, 6)
+      summaryEntries.forEach(([key, val]) => {
+        lines.push(`- **${key}:** ${typeof val === 'object' ? JSON.stringify(val) : String(val)}`)
+      })
+    }
+
+    if (platEvents.length > 0) {
+      lines.push(`\n**Eventos ativos (${platEvents.length}):**`)
+      platEvents.slice(0, 4).forEach(e => lines.push(`- [${e.severity}] ${e.event} — ${e.details}`))
+    } else {
+      lines.push(`\nNenhum evento grave registrado nesta plataforma no momento.`)
+    }
+
+    return lines.join('\n')
+  }
+
+  // --- Generic local fallback when no API key ---
   if (!apiKey) {
     const securityScore = Number(context.securityScore ?? 0)
     const riskLevel = String(context.overallRiskLevel ?? 'N/A')
     const criticalEvents = Number(context.criticalEvents ?? 0)
     const highEvents = Number(context.highEvents ?? 0)
-    return `Análise local (sem IA externa): o score geral de segurança da CAP está em ${securityScore}/100, com risco ${riskLevel}, ${criticalEvents} eventos críticos e ${highEvents} eventos de alta prioridade. Configure VITE_OPENAI_API_KEY para respostas analíticas mais detalhadas por pergunta.`
+    const ds = context.platformDataSources as { live?: string[]; mock?: string[] } | undefined
+
+    const lines: string[] = []
+    lines.push(`**Análise local CAP** (sem IA externa):\n`)
+    lines.push(`- **Score:** ${securityScore}/100 | **Risco:** ${riskLevel}`)
+    lines.push(`- **Eventos críticos:** ${criticalEvents} | **Eventos altos:** ${highEvents}`)
+    if (ds?.live?.length) lines.push(`- **Dados reais de:** ${ds.live.join(', ')}`)
+    lines.push(`\n💡 Configure \`VITE_OPENAI_API_KEY\` para respostas analíticas mais detalhadas e correlações avançadas.`)
+    return lines.join('\n')
   }
 
-  const prompt = `Você é o assistente executivo de cibersegurança da empresa CAP.
+  const prompt = `Você é o CAP Security Assistant — assistente executivo de cibersegurança da empresa CAP (Club Athletico Paulistano), operado pela Contego Security (MSSP).
 
 Regras obrigatórias:
 1) Responda APENAS perguntas relacionadas ao ambiente da CAP e aos dados fornecidos.
-2) Se a pergunta estiver fora desse escopo, responda exatamente: "Só posso responder sobre o ambiente e os dados de segurança da CAP.".
-3) Não invente números. Use apenas o contexto abaixo.
-4) Seja direto, técnico e objetivo, em português do Brasil.
-5) Sempre que útil, correlacione plataformas (EDR, SIEM, DLP, VM, Password, Infra) para justificar a resposta.
-6) IMPORTANTE: Diferencie dados REAIS (CrowdStrike, SIEM, Outpost24, Zabbix) de dados ESTIMADOS/MOCK (Keeper, Safetica). Ao responder, indique a confiabilidade dos dados.
+2) Se a pergunta estiver fora desse escopo, responda exatamente: "Só posso responder sobre o ambiente e os dados de segurança da CAP."
+3) Não invente números. Use apenas o contexto JSON abaixo.
+4) Seja direto, técnico e objetivo, em português do Brasil. Use **negrito** para métricas e plataformas.
+5) Sempre que útil, correlacione plataformas: **CrowdStrike** (EDR), **Wazuh** (SIEM), **Outpost24** (Vuln Mgmt), **Keeper** (Password Mgmt) e **Zabbix** (Infra).
+6) IMPORTANTE: Diferencie dados REAIS, SIMULADOS e OFFLINE usando o campo platformDataSources do contexto. Sempre cite a confiabilidade da resposta.
+7) Formate a resposta usando markdown: **negrito** para destaques, listas com "- " para itens, e quebre em parágrafos curtos.
 
-Algoritmo do Score:
-- 45% Pressão de risco (dados reais de CrowdStrike, SIEM, Outpost24, Zabbix)
-- 25% Compliance e higiene (dados reais de SIEM + Outpost24)
-- 10% Cobertura de integrações reais
-- 10% Saúde dos endpoints (CrowdStrike)
-- 10% Dados estimados (Keeper, Safetica — ainda mock)
+Algoritmo do Score de Segurança:
+- 30% Ameaças ativas (CrowdStrike — incidentes e detecções por severidade)
+- 15% Exposição a vulnerabilidades (Outpost24 CVEs + Keeper high-risk users, curva logarítmica)
+- 25% Compliance (Outpost24 patching + Keeper security score)
+- 15% Cobertura (quantas das 3 plataformas de score têm dados reais)
+- 15% Saúde de endpoints (CrowdStrike — % de endpoints com sensor ativo)
+Nota: Wazuh (SIEM) e Zabbix (Infra) NÃO entram no cálculo do score, mas seus alertas aparecem nos eventos.
 
 Contexto consolidado CAP (JSON):
 ${JSON.stringify(context, null, 2)}
@@ -191,7 +466,7 @@ ${JSON.stringify(context, null, 2)}
 Pergunta do usuário:
 ${question}
 
-Responda em até 6 linhas.`
+Responda de forma clara e estruturada em até 8 linhas. Use markdown.`
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -201,8 +476,16 @@ Responda em até 6 linhas.`
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 450,
+      messages: [
+        { role: 'system' as const, content: prompt },
+        // Include last 6 conversation turns for context
+        ...conversationHistory.slice(-6).map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+        { role: 'user' as const, content: question },
+      ],
+      max_tokens: 600,
       temperature: 0.3,
     }),
   })
@@ -251,25 +534,6 @@ function buildImportantEvents(dashboards: DashboardMap): ExecutiveEvent[] {
           event: String(a.description ?? 'Alerta relevante'),
           details: `${String(a.agent ?? 'Agente desconhecido')} • Regra ${String(a.rule ?? 'N/A')}`,
           status: 'Ativo',
-        })
-      })
-  }
-
-  const safetica = dashboards.safetica
-  if (safetica) {
-    const violations = (safetica.recentViolations as Array<Record<string, unknown>> | undefined) ?? []
-    violations
-      .filter((v) => toNumber(v.riskScore) >= 80 || String(v.action ?? '').includes('Blocked'))
-      .slice(0, 3)
-      .forEach((v, index) => {
-        const risk = toNumber(v.riskScore)
-        events.push({
-          id: `saf-${index}-${String(v.id ?? index)}`,
-          platform: 'Safetica',
-          severity: risk >= 90 ? 'Critical' : 'High',
-          event: `${String(v.classification ?? 'Violação DLP')} em ${String(v.channel ?? 'canal desconhecido')}`,
-          details: `${String(v.user ?? 'Usuário desconhecido')} • Score ${risk}`,
-          status: String(v.action ?? 'Bloqueado'),
         })
       })
   }
@@ -358,7 +622,7 @@ export default function ResumoExecutivo() {
 
       try {
         const entries = await Promise.all(
-          PLATFORM_IDS.map(async (platformId) => {
+          EXECUTIVE_PLATFORM_IDS.map(async (platformId) => {
             try {
               const response = await api.get<{ platform_id: string; data: Record<string, unknown> }>(
                 `/platforms/${platformId}/dashboard`,
@@ -400,68 +664,102 @@ export default function ResumoExecutivo() {
 
   const importantEvents = useMemo(() => buildImportantEvents(dashboards), [dashboards])
 
-  // ── Platform data source classification ──
-  const platformStatus = useMemo(() => {
-    const result: Record<PlatformId, DataSourceType> = {} as Record<PlatformId, DataSourceType>
-    for (const pid of PLATFORM_IDS) {
-      const data = dashboards[pid]
-      if (!data) {
-        result[pid] = 'offline'
-      } else if (MOCK_PLATFORMS.includes(pid)) {
-        result[pid] = 'mock'
-      } else if ((data as Record<string, unknown>)._live === true) {
-        result[pid] = 'live'
+  const platformIntel = useMemo(() => collectExecutivePlatformIntel(dashboards), [dashboards])
+
+  const platformStatus = platformIntel.statusMap
+  const livePlatformCount = platformIntel.liveCount
+  const mockPlatformCount = platformIntel.mockCount
+  const offlinePlatformCount = platformIntel.offlineCount
+  const onlinePlatforms = platformIntel.onlineCount
+
+  const scoreLivePlatforms = SCORE_PLATFORM_IDS.filter((pid) => platformStatus[pid] === 'live')
+    .map((pid) => EXECUTIVE_PLATFORM_LABELS[pid].split(' (')[0])
+
+  const severityCounters = useMemo<SeverityCounters>(() => {
+    const counters: SeverityCounters = {
+      critical: 0,
+      high: 0,
+      realCritical: 0,
+      realHigh: 0,
+      mockCritical: 0,
+      mockHigh: 0,
+    }
+
+    const addCounts = (platformId: PlatformId, counts: { critical: number; high: number }) => {
+      const critical = Math.max(0, Math.round(counts.critical))
+      const high = Math.max(0, Math.round(counts.high))
+      const status = platformStatus[platformId]
+
+      counters.critical += critical
+      counters.high += high
+
+      if (status === 'live') {
+        counters.realCritical += critical
+        counters.realHigh += high
       } else {
-        result[pid] = 'mock' // real platform that fell back to mock data
+        counters.mockCritical += critical
+        counters.mockHigh += high
       }
     }
-    return result
-  }, [dashboards])
 
-  const livePlatformCount = Object.values(platformStatus).filter((s) => s === 'live').length
-  const mockPlatformCount = Object.values(platformStatus).filter((s) => s === 'mock').length
-  const offlinePlatformCount = Object.values(platformStatus).filter((s) => s === 'offline').length
-  const onlinePlatforms = livePlatformCount + mockPlatformCount
+    addCounts('crowdstrike', countFromCrowdstrike(dashboards.crowdstrike))
+    addCounts('outpost24', countFromOutpost24(dashboards.outpost24))
+    addCounts('keeper', countFromKeeper(dashboards.keeper))
 
-  const criticalEvents = importantEvents.filter((e) => e.severity === 'Critical').length
-  const highEvents = importantEvents.filter((e) => e.severity === 'High').length
+    return counters
+  }, [dashboards, platformStatus])
 
-  // ── Events split by real vs mock ──
-  const realPlatformLabels = new Set(['CrowdStrike', 'SIEM', 'Outpost24', 'Zabbix'])
-  const realCritical = importantEvents.filter((e) => e.severity === 'Critical' && realPlatformLabels.has(e.platform)).length
-  const realHigh = importantEvents.filter((e) => e.severity === 'High' && realPlatformLabels.has(e.platform)).length
-  const mockCritical = criticalEvents - realCritical
-  const mockHigh = highEvents - realHigh
+  const criticalEvents = severityCounters.critical
+  const highEvents = severityCounters.high
+  const realCritical = severityCounters.realCritical
+  const realHigh = severityCounters.realHigh
+  const mockCritical = severityCounters.mockCritical
+  const mockHigh = severityCounters.mockHigh
 
   // ── IMPROVED SCORE ALGORITHM ──
-  // Factor 1: Threat Pressure from REAL integrations (weight: 45%)
-  const realThreatRaw = Math.min(100, Math.round(realCritical * 8 + realHigh * 3))
-  const realThreatScore = 100 - realThreatRaw // higher = better
+  // Separate active threats (CrowdStrike = incidents/detections)
+  // from vulnerability exposure (Outpost24 CVEs + Keeper risk users)
 
-  // Factor 2: Threat Pressure from MOCK data (weight: 10%)
-  const mockThreatRaw = Math.min(100, Math.round(mockCritical * 8 + mockHigh * 3))
-  const mockThreatScore = 100 - mockThreatRaw
+  // Per-platform severity for active vs vulnerability split
+  const csCounts = useMemo(() => countFromCrowdstrike(dashboards.crowdstrike), [dashboards.crowdstrike])
+  const opCounts = useMemo(() => countFromOutpost24(dashboards.outpost24), [dashboards.outpost24])
+  const kepCounts = useMemo(() => countFromKeeper(dashboards.keeper), [dashboards.keeper])
+
+  // Active threats: real-time incidents from CrowdStrike
+  const activeCritical = (platformStatus.crowdstrike === 'live' ? csCounts.critical : 0)
+  const activeHigh = (platformStatus.crowdstrike === 'live' ? csCounts.high : 0)
+
+  // Vulnerability exposure: CVEs + credential risk from Outpost24 + Keeper
+  const vulnCritical = (platformStatus.outpost24 === 'live' ? opCounts.critical : 0)
+    + (platformStatus.keeper === 'live' ? kepCounts.critical : 0)
+  const vulnHigh = (platformStatus.outpost24 === 'live' ? opCounts.high : 0)
+    + (platformStatus.keeper === 'live' ? kepCounts.high : 0)
+
+  // Factor 1: Active Threat Pressure (weight: 30%)
+  // Active incidents/detections — linear, each critical is impactful
+  const activeThreatRaw = Math.min(100, Math.round(activeCritical * 12 + activeHigh * 3))
+  const activeThreatScore = 100 - activeThreatRaw
+
+  // Factor 2: Vulnerability Exposure (weight: 15%)
+  // CVEs and risk users — logarithmic curve (many CVEs are normal, diminishing impact)
+  const vulnRaw = Math.min(100, Math.round(Math.log(vulnCritical + 1) * 16 + Math.log(vulnHigh + 1) * 6))
+  const vulnScore = 100 - vulnRaw
 
   // Factor 3: Compliance & Hygiene from real sources (weight: 25%)
   const complianceSignals = useMemo(() => {
-    const values: { value: number; source: string; isReal: boolean }[] = []
-
-    const wazuhData = dashboards.wazuh
-    const wazuhCompliance = wazuhData?.complianceBreakdown as Array<Record<string, unknown>> | undefined
-    if (wazuhCompliance?.length) {
-      const avgWazuh = wazuhCompliance.reduce((sum, item) => sum + toNumber(item.score), 0) / wazuhCompliance.length
-      values.push({ value: avgWazuh, source: 'SIEM compliance', isReal: platformStatus.wazuh === 'live' })
-    }
+    const values: { value: number; weight: number; source: string; isReal: boolean }[] = []
 
     const outpostPatch = dashboards.outpost24?.kpis as Record<string, unknown> | undefined
     const patchValue = (outpostPatch?.patchCompliance as Record<string, unknown> | undefined)?.value
     const patchPercent = parsePercent(patchValue)
-    if (patchPercent > 0) values.push({ value: patchPercent, source: 'Outpost24 patch compliance', isReal: platformStatus.outpost24 === 'live' })
+    // Outpost24 patch compliance — lower weight because it can be extremely low
+    if (patchPercent >= 0) values.push({ value: Math.max(patchPercent, 10), weight: 1, source: 'Outpost24 patch compliance', isReal: platformStatus.outpost24 === 'live' })
 
     const keeperKpis = dashboards.keeper?.kpis as Record<string, unknown> | undefined
     const keeperSecurityScore = (keeperKpis?.securityScore as Record<string, unknown> | undefined)?.value
     const keeperPercent = parsePercent(keeperSecurityScore)
-    if (keeperPercent > 0) values.push({ value: keeperPercent, source: 'Keeper security score', isReal: false })
+    // Keeper security score — higher weight (more reliable indicator)
+    if (keeperPercent > 0) values.push({ value: keeperPercent, weight: 2, source: 'Keeper security score', isReal: platformStatus.keeper === 'live' })
 
     return values
   }, [dashboards, platformStatus])
@@ -469,34 +767,38 @@ export default function ResumoExecutivo() {
   const realComplianceSignals = complianceSignals.filter((s) => s.isReal)
   const mockComplianceSignals = complianceSignals.filter((s) => !s.isReal)
   const avgRealCompliance = realComplianceSignals.length
-    ? realComplianceSignals.reduce((sum, s) => sum + s.value, 0) / realComplianceSignals.length
+    ? realComplianceSignals.reduce((sum, s) => sum + s.value * s.weight, 0) / realComplianceSignals.reduce((sum, s) => sum + s.weight, 0)
     : 55
   const avgMockCompliance = mockComplianceSignals.length
-    ? mockComplianceSignals.reduce((sum, s) => sum + s.value, 0) / mockComplianceSignals.length
+    ? mockComplianceSignals.reduce((sum, s) => sum + s.value * s.weight, 0) / mockComplianceSignals.reduce((sum, s) => sum + s.weight, 0)
     : 60
   void avgMockCompliance // used for context only
 
-  // Factor 4: Coverage (weight: 10%)
-  const coverageScore = Math.round((livePlatformCount / REAL_PLATFORMS.length) * 100)
+  // Factor 4: Coverage (weight: 15%)
+  const liveScorePlatformCount = SCORE_PLATFORM_IDS.filter((pid) => platformStatus[pid] === 'live').length
+  const coverageScore = Math.round((liveScorePlatformCount / SCORE_PLATFORM_IDS.length) * 100)
 
-  // Factor 5: CrowdStrike specific indicators (weight: 10%)
+  // Factor 5: CrowdStrike Endpoint Health (weight: 15%)
   const csData = dashboards.crowdstrike
   const csKpis = csData?.kpis as Record<string, { value?: unknown }> | undefined
   const csDeviceCount = toNumber(csKpis?.totalDevices?.value ?? 0)
-  const csOnlinePercent = csDeviceCount > 0 ? Math.min(100, toNumber(csKpis?.onlineDevices?.value ?? 0) / csDeviceCount * 100) : 50
+  // When CrowdStrike is live but totalDevices=0 (API edge case), assume good health (80)
+  const csOnlinePercent = csDeviceCount > 0
+    ? Math.min(100, toNumber(csKpis?.onlineDevices?.value ?? 0) / csDeviceCount * 100)
+    : (platformStatus.crowdstrike === 'live' ? 80 : 50)
   const csHealthScore = platformStatus.crowdstrike === 'live' ? Math.round(csOnlinePercent) : 50
 
   // Combined security score
   const securityScore = clamp(Math.round(
-    realThreatScore * 0.45 +
-    mockThreatScore * 0.10 +
+    activeThreatScore * 0.30 +
+    vulnScore * 0.15 +
     avgRealCompliance * 0.25 +
-    coverageScore * 0.10 +
-    csHealthScore * 0.10
+    coverageScore * 0.15 +
+    csHealthScore * 0.15
   ), 0, 100)
   const securityLevel = scoreLabel(securityScore)
 
-  const overallRiskScore = Math.min(100, Math.round(realCritical * 8 + realHigh * 3 + mockCritical * 2 + mockHigh * 1 + offlinePlatformCount * 5))
+  const overallRiskScore = Math.min(100, Math.round(activeCritical * 10 + activeHigh * 3 + vulnCritical * 2 + vulnHigh * 1 + offlinePlatformCount * 5))
   const overallRiskLevel = levelFromScore(overallRiskScore)
   const overallTrend = criticalEvents > 8 ? 6 : criticalEvents > 4 ? 3 : -2
 
@@ -505,59 +807,67 @@ export default function ResumoExecutivo() {
   const scoreBreakdown = useMemo(() => {
     return [
       {
-        factor: 'Pressão de risco — dados reais',
-        weight: '45%',
-        value: `${realThreatScore}/100`,
-        source: `${realCritical} críticos + ${realHigh} altos de CrowdStrike, SIEM, Outpost24, Zabbix`,
+        factor: 'Ameaças ativas (CrowdStrike)',
+        weight: '30%',
+        value: `${activeThreatScore}/100`,
+        source: `${activeCritical} incidentes críticos + ${activeHigh} altos (detecções e violações ativas)`,
         isReal: true,
       },
       {
-        factor: 'Compliance e higiene — dados reais',
+        factor: 'Exposição a vulnerabilidades (Outpost24 + Keeper)',
+        weight: '15%',
+        value: `${vulnScore}/100`,
+        source: `${vulnCritical} CVEs/riscos críticos + ${vulnHigh} altos (escala logarítmica)`,
+        isReal: true,
+      },
+      {
+        factor: 'Compliance e higiene',
         weight: '25%',
         value: `${normalizedCompliance}/100`,
-        source: realComplianceSignals.map((s) => s.source).join(' + ') || 'SIEM + Outpost24',
+        source: realComplianceSignals.map((s) => s.source).join(' + ') || 'Outpost24 + Keeper',
         isReal: true,
       },
       {
         factor: 'Cobertura de integrações reais',
-        weight: '10%',
+        weight: '15%',
         value: `${coverageScore}/100`,
-        source: `${livePlatformCount}/${REAL_PLATFORMS.length} plataformas com dados reais`,
+        source: `${liveScorePlatformCount}/${SCORE_PLATFORM_IDS.length} plataformas do score com dados reais`,
         isReal: true,
       },
       {
         factor: 'Saúde dos endpoints (CrowdStrike)',
-        weight: '10%',
+        weight: '15%',
         value: `${csHealthScore}/100`,
         source: platformStatus.crowdstrike === 'live' ? `${Math.round(csOnlinePercent)}% dos devices online` : 'Estimado (dados mock)',
         isReal: platformStatus.crowdstrike === 'live',
       },
-      {
-        factor: 'Pressão de risco — dados estimados',
-        weight: '10%',
-        value: `${mockThreatScore}/100`,
-        source: `${mockCritical} críticos + ${mockHigh} altos de Keeper, Safetica (dados mock)`,
-        isReal: false,
-      },
     ]
-  }, [realThreatScore, normalizedCompliance, coverageScore, csHealthScore, realCritical, realHigh, mockCritical, mockHigh, livePlatformCount, realComplianceSignals, csOnlinePercent, platformStatus, mockThreatScore])
+  }, [activeThreatScore, vulnScore, normalizedCompliance, coverageScore, csHealthScore, activeCritical, activeHigh, vulnCritical, vulnHigh, liveScorePlatformCount, realComplianceSignals, csOnlinePercent, platformStatus])
 
   const improvementRecommendations = useMemo(() => {
     const recs: Array<{ action: string; expectedGain: string; basedOn: string }> = []
 
-    if (realCritical > 0) {
+    if (activeCritical > 0) {
       recs.push({
-        action: 'Remediar eventos críticos reais das 4 plataformas integradas nas próximas 24h',
-        expectedGain: '+8 a +15 pontos',
-        basedOn: `${realCritical} eventos críticos de dados reais (CrowdStrike, SIEM, Outpost24, Zabbix)`,
+        action: 'Remediar incidentes críticos ativos (CrowdStrike) nas próximas 24h',
+        expectedGain: '+10 a +18 pontos',
+        basedOn: `${activeCritical} incidentes críticos ativos`,
       })
     }
 
-    if (realHigh > 3) {
+    if (activeHigh > 3) {
       recs.push({
-        action: 'Reduzir eventos de alta prioridade por regra/automação de resposta',
+        action: 'Reduzir alertas de alta prioridade por regra/automação de resposta',
         expectedGain: '+4 a +10 pontos',
-        basedOn: `${realHigh} eventos altos de plataformas com dados reais`,
+        basedOn: `${activeHigh} alertas altos ativos de CrowdStrike`,
+      })
+    }
+
+    if (vulnCritical > 5) {
+      recs.push({
+        action: 'Priorizar remediação das CVEs críticas do Outpost24 e usuários de alto risco no Keeper',
+        expectedGain: '+3 a +8 pontos',
+        basedOn: `${vulnCritical} CVEs/riscos críticos de vulnerabilidade`,
       })
     }
 
@@ -565,23 +875,17 @@ export default function ResumoExecutivo() {
       recs.push({
         action: 'Elevar compliance e patching para >80% nos controles monitorados',
         expectedGain: '+5 a +12 pontos',
-        basedOn: `compliance real atual em ${normalizedCompliance}%, baseado em SIEM + Outpost24`,
+        basedOn: `compliance real atual em ${normalizedCompliance}%, baseado em Outpost24 + Keeper`,
       })
     }
 
-    if (livePlatformCount < REAL_PLATFORMS.length) {
+    if (liveScorePlatformCount < SCORE_PLATFORM_IDS.length) {
       recs.push({
-        action: `Ativar integração real nas ${REAL_PLATFORMS.length - livePlatformCount} plataformas ainda sem dados reais`,
+        action: `Ativar integração real nas ${SCORE_PLATFORM_IDS.length - liveScorePlatformCount} plataformas de score ainda sem dados reais`,
         expectedGain: '+3 a +8 pontos',
-        basedOn: `cobertura real ${livePlatformCount}/${REAL_PLATFORMS.length} — faltam dados reais`,
+        basedOn: `cobertura real ${liveScorePlatformCount}/${SCORE_PLATFORM_IDS.length} no score — faltam dados reais`,
       })
     }
-
-    recs.push({
-      action: 'Integrar Keeper e Safetica com dados reais para score mais preciso',
-      expectedGain: '+5 a +10 pontos de precisão',
-      basedOn: `2 plataformas ainda com dados mock reduzem a confiabilidade do score`,
-    })
 
     if (recs.length === 0) {
       recs.push({
@@ -592,35 +896,16 @@ export default function ResumoExecutivo() {
     }
 
     return recs.slice(0, 4)
-  }, [realCritical, realHigh, normalizedCompliance, livePlatformCount])
+  }, [activeCritical, activeHigh, vulnCritical, normalizedCompliance, liveScorePlatformCount])
 
   const topHighlights = importantEvents.slice(0, 4)
 
   const assistantContext = useMemo(() => {
-    const platformSummary = PLATFORM_IDS.map((platformId) => {
-      const data = dashboards[platformId]
-      const dataSource = platformStatus[platformId]
-      if (!data) {
-        return { platform: PLATFORM_LABELS[platformId], platformId, online: false, dataSource: 'offline' }
-      }
-
-      const kpis = data.kpis as Record<string, { value?: unknown; label?: string }> | undefined
-      const kpiSummary = kpis
-        ? Object.entries(kpis).slice(0, 6).map(([key, value]) => ({
-          key,
-          label: value?.label ?? key,
-          value: value?.value ?? 'N/A',
-        }))
-        : []
-
-      return {
-        platform: PLATFORM_LABELS[platformId],
-        platformId,
-        online: true,
-        dataSource,
-        kpis: kpiSummary,
-      }
-    })
+    const confidenceNote = [
+      platformIntel.livePlatforms.length ? `Reais: ${platformIntel.livePlatforms.join(', ')}` : '',
+      platformIntel.mockPlatforms.length ? `Simulados: ${platformIntel.mockPlatforms.join(', ')}` : '',
+      platformIntel.offlinePlatforms.length ? `Offline: ${platformIntel.offlinePlatforms.join(', ')}` : '',
+    ].filter(Boolean).join(' | ')
 
     return {
       company: 'CAP',
@@ -629,14 +914,20 @@ export default function ResumoExecutivo() {
       realDataPlatforms: livePlatformCount,
       mockDataPlatforms: mockPlatformCount,
       offlinePlatforms: offlinePlatformCount,
+      platformDataSources: {
+        live: platformIntel.livePlatforms,
+        mock: platformIntel.mockPlatforms,
+        offline: platformIntel.offlinePlatforms,
+      },
       scoreAlgorithm: {
-        description: 'Score calculado com peso diferenciado: 45% pressão de risco real + 25% compliance real + 10% cobertura + 10% saúde endpoints + 10% dados estimados',
-        realThreatWeight: '45%',
+        description: 'Score calculado com fatores diferenciados: 30% ameaças ativas (CrowdStrike) + 15% vulnerabilidades (Outpost24+Keeper, curva log) + 25% compliance + 15% cobertura + 15% saúde endpoints. Sem Zabbix e sem SIEM.',
+        activeThreatsWeight: '30%',
+        vulnExposureWeight: '15%',
         complianceWeight: '25%',
-        coverageWeight: '10%',
-        endpointHealthWeight: '10%',
-        mockThreatWeight: '10%',
-        note: 'Keeper e Safetica ainda usam dados mock — o score terá maior precisão quando integrados com dados reais',
+        coverageWeight: '15%',
+        endpointHealthWeight: '15%',
+        excludedFromScore: ['SIEM', 'Zabbix'],
+        note: confidenceNote || 'Todas as plataformas estão com dados reais',
       },
       securityScore,
       securityLevel,
@@ -649,12 +940,12 @@ export default function ResumoExecutivo() {
       mockCritical,
       mockHigh,
       topEvents: importantEvents.slice(0, 12),
-      platformSummary,
+      platformSummary: platformIntel.platformSummary,
       scoreBreakdown,
       improvementRecommendations,
       refreshedAt,
     }
-  }, [onlinePlatforms, livePlatformCount, mockPlatformCount, offlinePlatformCount, securityScore, securityLevel, overallRiskScore, overallRiskLevel, criticalEvents, highEvents, realCritical, realHigh, mockCritical, mockHigh, importantEvents, dashboards, platformStatus, scoreBreakdown, improvementRecommendations, refreshedAt])
+  }, [onlinePlatforms, livePlatformCount, mockPlatformCount, offlinePlatformCount, securityScore, securityLevel, overallRiskScore, overallRiskLevel, criticalEvents, highEvents, realCritical, realHigh, mockCritical, mockHigh, importantEvents, platformIntel, scoreBreakdown, improvementRecommendations, refreshedAt])
 
   useEffect(() => {
     setMessages((prev) => {
@@ -663,12 +954,12 @@ export default function ResumoExecutivo() {
         {
           id: 'assistant-init',
           role: 'assistant',
-          content: `Sou o CAP Security Assistant. Score geral: ${securityScore}/100 (${securityLevel}). Calculado com dados reais de ${livePlatformCount} plataformas (CrowdStrike, SIEM, Outpost24, Zabbix) + estimativa de 2 plataformas mock (Keeper, Safetica). Posso correlacionar dados e explicar o score.`,
+          content: `Sou o CAP Security Assistant. Score geral: ${securityScore}/100 (${securityLevel}). Fontes atuais: ${platformIntel.livePlatforms.length} reais, ${platformIntel.mockPlatforms.length} simuladas e ${platformIntel.offlinePlatforms.length} offline. Posso correlacionar os dados e explicar o score com base no que está online agora.`,
           createdAt: Date.now(),
         },
       ]
     })
-  }, [securityScore, securityLevel, livePlatformCount])
+  }, [securityScore, securityLevel, platformIntel.livePlatforms.length, platformIntel.mockPlatforms.length, platformIntel.offlinePlatforms.length])
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -692,9 +983,15 @@ export default function ResumoExecutivo() {
     setChatLoading(true)
 
     try {
+      // Build conversation history from existing messages (exclude system init)
+      const history = messages
+        .filter(m => m.id !== 'assistant-init')
+        .map(m => ({ role: m.role, content: m.content }))
+
       const answer = await askExecutiveAssistant({
         question: trimmed,
         context: assistantContext,
+        conversationHistory: history,
       })
 
       const assistantMessage: ChatMessage = {
@@ -721,6 +1018,45 @@ export default function ResumoExecutivo() {
     }
   }
 
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const clearChat = useCallback(() => {
+    setMessages([
+      {
+        id: 'assistant-init',
+        role: 'assistant',
+        content: `Sou o CAP Security Assistant. Score geral: ${securityScore}/100 (${securityLevel}). Fontes atuais: ${platformIntel.livePlatforms.length} reais, ${platformIntel.mockPlatforms.length} simuladas e ${platformIntel.offlinePlatforms.length} offline. Posso correlacionar os dados e explicar o score com base no que está online agora.`,
+        createdAt: Date.now(),
+      },
+    ])
+  }, [securityScore, securityLevel, platformIntel.livePlatforms.length, platformIntel.mockPlatforms.length, platformIntel.offlinePlatforms.length])
+
+  const copyMessage = useCallback((messageId: string, content: string) => {
+    navigator.clipboard.writeText(content).then(() => {
+      setCopiedId(messageId)
+      setTimeout(() => setCopiedId(null), 2000)
+    }).catch(() => { /* clipboard not available */ })
+  }, [])
+
+  const suggestedQuestions = useMemo(() => {
+    const base = [
+      { icon: '📊', text: 'Qual o score geral de segurança da CAP hoje e por quê?' },
+      { icon: '🔗', text: 'Quais são os maiores riscos correlacionados entre SIEM e EDR?' },
+      { icon: '⚡', text: 'Qual a prioridade de ação nas próximas 24 horas?' },
+    ]
+    const extras = [
+      { icon: '🔐', text: 'Como está o CrowdStrike (EDR)?' },
+      { icon: '📡', text: 'Quais plataformas estão online com dados reais?' },
+      { icon: '🛡️', text: 'Quantos eventos críticos temos agora e onde?' },
+      { icon: '🔑', text: 'Como está o Keeper e a segurança de senhas?' },
+      { icon: '📈', text: 'O que fazer para melhorar a pontuação de segurança?' },
+      { icon: '🔍', text: 'Quais vulnerabilidades críticas foram encontradas?' },
+    ]
+    // Show the 3 base + 2 random extras, rotating
+    const shuffled = extras.sort(() => Math.random() - 0.5).slice(0, 2)
+    return [...base, ...shuffled]
+  }, [])
+
   const assistantPanel = (
     <div
       className="rounded-xl flex flex-col gap-0 shadow-lg overflow-hidden"
@@ -735,8 +1071,8 @@ export default function ResumoExecutivo() {
         style={{ background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)', borderBottom: '1px solid #334155' }}
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7C3AED, #2563EB)' }}>
-            <Bot size={14} style={{ color: '#FFFFFF' }} />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7C3AED, #2563EB)' }}>
+            <Bot size={16} style={{ color: '#FFFFFF' }} />
           </div>
           <div>
             <h2 className="text-[13px] font-bold" style={{ color: '#F1F5F9' }}>
@@ -747,70 +1083,115 @@ export default function ResumoExecutivo() {
             </span>
           </div>
         </div>
-        <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: '#065F46', color: '#6EE7B7' }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Online
-        </span>
+        <div className="flex items-center gap-2">
+          {messages.length > 1 && (
+            <button
+              onClick={clearChat}
+              className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-all hover:brightness-125"
+              style={{ background: '#1E293B', border: '1px solid #475569', color: '#94A3B8' }}
+              title="Limpar conversa"
+            >
+              <Trash2 size={10} /> Limpar
+            </button>
+          )}
+          <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: '#065F46', color: '#6EE7B7' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Online
+          </span>
+        </div>
       </div>
 
       {/* Messages */}
       <div
         ref={chatContainerRef}
-        className="p-4 max-h-80 overflow-y-auto flex flex-col gap-3"
-        style={{ background: '#0B1120' }}
+        className="p-4 overflow-y-auto flex flex-col gap-3"
+        style={{ background: '#0B1120', maxHeight: '480px', minHeight: '200px' }}
       >
         {messages.map((message) => (
           <div
             key={message.id}
-            className="w-full flex"
+            className="w-full flex group"
             style={{ justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start' }}
           >
             <div
-              className="rounded-xl px-3.5 py-2.5 max-w-[90%]"
+              className="rounded-xl px-3.5 py-2.5 max-w-[92%] relative"
               style={{
                 background: message.role === 'user' ? '#1D4ED8' : '#1E293B',
                 border: message.role === 'user' ? '1px solid #3B82F6' : '1px solid #334155',
               }}
             >
-              <div className="flex items-center gap-1.5 mb-1">
-                {message.role === 'user'
-                  ? <User size={11} style={{ color: '#BFDBFE' }} />
-                  : <Bot size={11} style={{ color: '#C4B5FD' }} />}
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: message.role === 'user' ? '#93C5FD' : '#A78BFA' }}>
-                  {message.role === 'user' ? 'Você' : 'Assistant'}
-                </span>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-1.5">
+                  {message.role === 'user'
+                    ? <User size={11} style={{ color: '#BFDBFE' }} />
+                    : <Bot size={11} style={{ color: '#C4B5FD' }} />}
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: message.role === 'user' ? '#93C5FD' : '#A78BFA' }}>
+                    {message.role === 'user' ? 'Você' : 'Assistant'}
+                  </span>
+                  <span className="text-[9px]" style={{ color: '#475569' }}>{formatChatTime(message.createdAt)}</span>
+                </div>
+                {message.role === 'assistant' && message.id !== 'assistant-init' && (
+                  <button
+                    onClick={() => copyMessage(message.id, message.content)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/5"
+                    title="Copiar resposta"
+                  >
+                    {copiedId === message.id
+                      ? <Check size={10} style={{ color: '#22C55E' }} />
+                      : <Copy size={10} style={{ color: '#64748B' }} />
+                    }
+                  </button>
+                )}
               </div>
-              <p className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: '#F8FAFC' }}>
-                {message.content}
-              </p>
+              <div className="text-[12.5px] leading-relaxed" style={{ color: '#F8FAFC' }}>
+                {message.role === 'assistant' ? renderMarkdown(message.content) : (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                )}
+              </div>
             </div>
           </div>
         ))}
 
         {chatLoading && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: '#93C5FD' }}>
-            <Loader2 size={12} className="animate-spin" />
-            Analisando e correlacionando dados das plataformas…
+          <div className="flex items-start gap-2" style={{ color: '#93C5FD' }}>
+            <div className="rounded-xl px-3.5 py-2.5" style={{ background: '#1E293B', border: '1px solid #334155' }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Bot size={11} style={{ color: '#C4B5FD' }} />
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#A78BFA' }}>
+                  Assistant
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+                <span className="text-[11px]" style={{ color: '#64748B' }}>Analisando dados das plataformas…</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Suggestions */}
-      <div className="flex items-center gap-2 flex-wrap px-4 py-2" style={{ borderTop: '1px solid #1E293B' }}>
-        {[
-          'Qual o score geral de segurança da CAP hoje e por quê?',
-          'Quais são os maiores riscos correlacionados entre SIEM e EDR?',
-          'Qual prioridade de ação nas próximas 24 horas?',
-        ].map((suggestion) => (
-          <button
-            key={suggestion}
-            onClick={() => sendQuestion(suggestion)}
-            disabled={chatLoading}
-            className="text-[11px] px-3 py-1.5 rounded-full disabled:opacity-40 transition-all hover:brightness-125"
-            style={{ background: '#1E293B', border: '1px solid #475569', color: '#E2E8F0' }}
-          >
-            {suggestion}
-          </button>
-        ))}
+      <div className="flex flex-col gap-1.5 px-4 py-2.5" style={{ borderTop: '1px solid #1E293B' }}>
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <MessageSquare size={10} style={{ color: '#64748B' }} />
+          <span className="text-[10px] font-medium" style={{ color: '#64748B' }}>Perguntas sugeridas</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {suggestedQuestions.map((suggestion) => (
+            <button
+              key={suggestion.text}
+              onClick={() => sendQuestion(suggestion.text)}
+              disabled={chatLoading}
+              className="text-[10.5px] px-2.5 py-1.5 rounded-lg disabled:opacity-40 transition-all hover:brightness-125 hover:border-blue-500/50 text-left"
+              style={{ background: '#1E293B', border: '1px solid #334155', color: '#CBD5E1' }}
+            >
+              <span className="mr-1">{suggestion.icon}</span>{suggestion.text}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Input */}
@@ -825,7 +1206,7 @@ export default function ResumoExecutivo() {
             }
           }}
           placeholder="Pergunte sobre risco, incidentes, correlação entre plataformas e score da CAP…"
-          className="flex-1 rounded-lg px-3 py-2.5 text-[13px] outline-none placeholder:text-slate-500"
+          className="flex-1 rounded-lg px-3 py-2.5 text-[13px] outline-none placeholder:text-slate-500 focus:ring-1 focus:ring-blue-500/50"
           style={{ background: '#1E293B', border: '1px solid #475569', color: '#F1F5F9' }}
           disabled={chatLoading}
         />
@@ -876,11 +1257,11 @@ export default function ResumoExecutivo() {
                 Plataformas Monitoradas
               </span>
               <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                {livePlatformCount} com dados reais &bull; {mockPlatformCount} com dados simulados
+                {livePlatformCount} com dados reais &bull; {mockPlatformCount} com dados simulados &bull; {offlinePlatformCount} offline
               </span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
-              {PLATFORM_IDS.map((pid) => {
+              {EXECUTIVE_PLATFORM_IDS.map((pid) => {
                 const st = platformStatus[pid]
                 const isLive = st === 'live'
                 const isMock = st === 'mock'
@@ -895,7 +1276,7 @@ export default function ResumoExecutivo() {
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: dotColor }} />
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                        {PLATFORM_LABELS[pid].split(' (')[0]}
+                        {EXECUTIVE_PLATFORM_LABELS[pid].split(' (')[0]}
                       </p>
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{statusText}</p>
                     </div>
@@ -906,7 +1287,7 @@ export default function ResumoExecutivo() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard title="Plataformas Online" value={onlinePlatforms} trend={onlinePlatforms - PLATFORM_IDS.length} icon={CheckCircle2} />
+            <MetricCard title="Plataformas Online" value={onlinePlatforms} trend={onlinePlatforms - EXECUTIVE_PLATFORM_IDS.length} icon={CheckCircle2} />
             <MetricCard title="Eventos Críticos" value={criticalEvents} trend={criticalEvents} icon={ShieldAlert} />
             <MetricCard title="Eventos Altos" value={highEvents} trend={highEvents} icon={AlertTriangle} />
             <MetricCard title="Nível de Risco" value={`${overallRiskScore}/100`} trend={overallTrend} icon={Activity} />
@@ -922,7 +1303,7 @@ export default function ResumoExecutivo() {
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  Security Score CAP
+                  Score CAP
                 </span>
                 <span
                   className="text-xs font-bold px-2 py-1 rounded-full"
@@ -938,7 +1319,7 @@ export default function ResumoExecutivo() {
               <p className="text-3xl font-extrabold tabular-nums" style={{ color: 'var(--text-primary)' }}>
                 {securityScore}/100
               </p>
-              <div className="mt-3 flex flex-col gap-1.5">
+              <div className="mt-3">
                 <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
                   <div
                     className="h-full rounded-full transition-all"
@@ -948,10 +1329,6 @@ export default function ResumoExecutivo() {
                     }}
                   />
                 </div>
-                <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                  Calculado com base em {livePlatformCount} plataformas reais e {mockPlatformCount} simuladas.
-                  Quanto maior, melhor a postura de segurança.
-                </p>
               </div>
             </div>
 
@@ -971,11 +1348,15 @@ export default function ResumoExecutivo() {
               <div className="flex flex-col gap-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
                 <div className="flex items-start gap-2">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style={{ background: '#22C55E' }} />
-                  <span><strong>Dados reais</strong> — CrowdStrike, SIEM, Outpost24 e Zabbix estão conectados e enviando dados em tempo real.</span>
+                  <span><strong>Dados reais</strong> — {platformIntel.livePlatforms.join(', ') || 'Nenhuma plataforma no momento'}.</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style={{ background: '#F59E0B' }} />
-                  <span><strong>Dados simulados</strong> — Keeper e Safetica ainda não foram integrados. O score usa estimativas para essas plataformas.</span>
+                  <span><strong>Dados simulados</strong> — {platformIntel.mockPlatforms.join(', ') || 'Nenhuma plataforma simulada'}.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style={{ background: '#EF4444' }} />
+                  <span><strong>Offline</strong> — {platformIntel.offlinePlatforms.join(', ') || 'Nenhuma plataforma offline'}.</span>
                 </div>
               </div>
             </div>
@@ -1117,22 +1498,7 @@ export default function ResumoExecutivo() {
             </div>
           </div>
 
-          <div
-            className="rounded-xl p-4"
-            style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-default)',
-            }}
-          >
-            <h3 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Metodologia e Governança</h3>
-            <div className="flex flex-col gap-2 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-              <p>• <strong>Score ponderado:</strong> 90% do score vem de dados reais (CrowdStrike, SIEM, Outpost24, Zabbix) e 10% de dados estimados (Keeper, Safetica).</p>
-              <p>• <strong>Transparência:</strong> cada fator do score mostra se é baseado em dados reais ou mock, com peso e fonte declarados.</p>
-              <p>• <strong>AI-assisted:</strong> o assistente usa OpenAI para correlacionar dados e gerar análises em tempo real, sempre diferenciando a qualidade dos dados.</p>
-              <p>• <strong>Atualização:</strong> refresh automático a cada 60 segundos com recalculo do score baseado nos dados mais recentes.</p>
-              <p>• <strong>Evolução:</strong> quando Keeper e Safetica forem integrados com dados reais, o score se tornará 100% baseado em dados reais.</p>
-            </div>
-          </div>
+
         </div>
       </div>
     </PageLayout>

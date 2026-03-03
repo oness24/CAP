@@ -4,7 +4,6 @@ import type { NavItem } from './navigation'
 export type PlatformId =
   | 'crowdstrike'
   | 'wazuh'
-  | 'safetica'
   | 'outpost24'
   | 'keeper'
   | 'zabbix'

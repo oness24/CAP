@@ -1,0 +1,392 @@
+{
+  "fetched_at": "2026-03-02T13:45:37.943838+00:00",
+  "mc_id": 212488,
+  "mc_name": "CLUB ATHLETICO PAULISTANO",
+  "enterprise_name": "CLUB ATHLETICO PAULISTANO",
+  "user_report": [
+    {
+      "email": "alex.carvalho@paulistano.org.br",
+      "name": "Alex Carvalho",
+      "status": "Active",
+      "last_login": "2025-10-27 18:22:17+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "All Users"
+      ],
+      "teams": []
+    },
+    {
+      "email": "cassia.reis@paulistano.org.br",
+      "name": "Cassia Cristiane Veiga Reis",
+      "status": "Active",
+      "last_login": "2025-08-26 11:00:35+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "All Users",
+        "Keeper Administrator"
+      ],
+      "teams": [
+        "TI - Lideran\u00e7a",
+        "TI - SI",
+        "TI - Suporte"
+      ]
+    },
+    {
+      "email": "daniel.oliveira@paulistano.org.br",
+      "name": "Daniel Oliveira",
+      "status": "Active",
+      "last_login": "2026-02-26 19:29:38+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "Keeper Administrator"
+      ],
+      "teams": [
+        "TI - Lideran\u00e7a",
+        "TI - SI"
+      ]
+    },
+    {
+      "email": "douglas.meirelles@paulistano.org.br",
+      "name": "Douglas Meirelles Alencar",
+      "status": "Active",
+      "last_login": "2026-02-26 12:01:54+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "Keeper Administrator"
+      ],
+      "teams": [
+        "TI - Lideran\u00e7a",
+        "TI - SI"
+      ]
+    },
+    {
+      "email": "edisio.gomes@paulistano.org.br",
+      "name": "Ed\u00edsio Gomes",
+      "status": "Active",
+      "last_login": "2025-09-22 13:02:11+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "All Users"
+      ],
+      "teams": [
+        "TI - Infra",
+        "TI - Lideran\u00e7a"
+      ]
+    },
+    {
+      "email": "flavio.terceiro@paulistano.org.br",
+      "name": "Flavio Figueiredo Rocha Mendon\u00e7a",
+      "status": "Active",
+      "last_login": "2026-03-02 11:49:08+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "Keeper Administrator"
+      ],
+      "teams": [
+        "TI - SI-Contego"
+      ]
+    },
+    {
+      "email": "guilherme.vasconcelos@paulistano.org.br",
+      "name": "Guilherme Vasconcelos",
+      "status": "Active",
+      "last_login": "2025-11-12 18:38:26+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "All Users"
+      ],
+      "teams": [
+        "TI - Infra"
+      ]
+    },
+    {
+      "email": "joao.silva@paulistano.org.br",
+      "name": "Jo\u00e3o Diego da Silva",
+      "status": "Active",
+      "last_login": "2026-02-23 14:34:47+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "All Users"
+      ],
+      "teams": [
+        "TI - Infra"
+      ]
+    },
+    {
+      "email": "mauricio.faria@paulistano.org.br",
+      "name": "Mauricio de Faria",
+      "status": "Active",
+      "last_login": "2025-03-24 17:06:18+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "All Users"
+      ],
+      "teams": [
+        "TI - Lideran\u00e7a"
+      ]
+    },
+    {
+      "email": "patricia.nunes@paulistano.org.br",
+      "name": "Patr\u00edcia Nunes",
+      "status": "Active",
+      "last_login": "2025-10-27 15:55:00+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "All Users"
+      ],
+      "teams": []
+    },
+    {
+      "email": "paulo.rodriguez@paulistano.org.br",
+      "name": "Paulo Rodriguez",
+      "status": "Active",
+      "last_login": "2025-10-27 18:45:27+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "All Users"
+      ],
+      "teams": []
+    },
+    {
+      "email": "rubens.junior@paulistano.org.br",
+      "name": "Rubens Alves Junior",
+      "status": "Active",
+      "last_login": "2026-02-04 18:43:57+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "All Users"
+      ],
+      "teams": [
+        "TI - Infra"
+      ]
+    },
+    {
+      "email": "valter.santos@paulistano.org.br",
+      "name": "Valter Junior de Andrade Santos",
+      "status": "Active",
+      "last_login": "2026-02-03 19:32:58+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "All Users"
+      ],
+      "teams": [
+        "TI - SI-Contego"
+      ]
+    },
+    {
+      "email": "victor.macharete@paulistano.org.br",
+      "name": "Victor Hugo Rodrigues Macharete",
+      "status": "Active",
+      "last_login": "2026-03-02 11:49:18+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Keeper Administrator"
+      ],
+      "teams": []
+    },
+    {
+      "email": "vinicius.oliveira@paulistano.org.br",
+      "name": "Vinicius Ferreira de Oliveira",
+      "status": "Active",
+      "last_login": "2026-03-02 10:58:08+00:00",
+      "node": "CLUB ATHLETICO PAULISTANO",
+      "roles": [
+        "Acesso geral",
+        "All Users",
+        "Keeper Administrator"
+      ],
+      "teams": []
+    }
+  ],
+  "security_audit": [
+    {
+      "email": "edisio.gomes@paulistano.org.br",
+      "name": "Ed\u00edsio Gomes",
+      "weak": 0,
+      "fair": 0,
+      "medium": 0,
+      "strong": 63,
+      "reused": 42,
+      "unique": 21,
+      "securityScore": 83,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "flavio.terceiro@paulistano.org.br",
+      "name": "Flavio Figueiredo Rocha Mendon\u00e7a",
+      "weak": 3,
+      "fair": 0,
+      "medium": 0,
+      "strong": 70,
+      "reused": 9,
+      "unique": 64,
+      "securityScore": 96,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "douglas.meirelles@paulistano.org.br",
+      "name": "Douglas Meirelles Alencar",
+      "weak": 0,
+      "fair": 0,
+      "medium": 2,
+      "strong": 28,
+      "reused": 2,
+      "unique": 28,
+      "securityScore": 97,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "vinicius.oliveira@paulistano.org.br",
+      "name": "Vinicius Ferreira de Oliveira",
+      "weak": 2,
+      "fair": 5,
+      "medium": 11,
+      "strong": 41,
+      "reused": 19,
+      "unique": 40,
+      "securityScore": 84,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "alex.carvalho@paulistano.org.br",
+      "name": "Alex Carvalho",
+      "weak": 0,
+      "fair": 0,
+      "medium": 0,
+      "strong": 0,
+      "reused": 0,
+      "unique": 0,
+      "securityScore": 50,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "victor.macharete@paulistano.org.br",
+      "name": "Victor Hugo Rodrigues Macharete",
+      "weak": 2,
+      "fair": 10,
+      "medium": 17,
+      "strong": 76,
+      "reused": 33,
+      "unique": 72,
+      "securityScore": 85,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "daniel.oliveira@paulistano.org.br",
+      "name": "Daniel Oliveira",
+      "weak": 0,
+      "fair": 7,
+      "medium": 3,
+      "strong": 69,
+      "reused": 12,
+      "unique": 67,
+      "securityScore": 93,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "valter.santos@paulistano.org.br",
+      "name": "Valter Junior de Andrade Santos",
+      "weak": 0,
+      "fair": 0,
+      "medium": 0,
+      "strong": 1,
+      "reused": 0,
+      "unique": 1,
+      "securityScore": 100,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "patricia.nunes@paulistano.org.br",
+      "name": "Patr\u00edcia Nunes",
+      "weak": 0,
+      "fair": 0,
+      "medium": 0,
+      "strong": 0,
+      "reused": 0,
+      "unique": 0,
+      "securityScore": 50,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "paulo.rodriguez@paulistano.org.br",
+      "name": "Paulo Rodriguez",
+      "weak": 0,
+      "fair": 0,
+      "medium": 0,
+      "strong": 0,
+      "reused": 0,
+      "unique": 0,
+      "securityScore": 50,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "mauricio.faria@paulistano.org.br",
+      "name": "Mauricio de Faria",
+      "weak": 0,
+      "fair": 0,
+      "medium": 0,
+      "strong": 1,
+      "reused": 0,
+      "unique": 1,
+      "securityScore": 100,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "cassia.reis@paulistano.org.br",
+      "name": "Cassia Cristiane Veiga Reis",
+      "weak": 0,
+      "fair": 0,
+      "medium": 0,
+      "strong": 0,
+      "reused": 0,
+      "unique": 0,
+      "securityScore": 50,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "guilherme.vasconcelos@paulistano.org.br",
+      "name": "Guilherme Vasconcelos",
+      "weak": 12,
+      "fair": 6,
+      "medium": 12,
+      "strong": 81,
+      "reused": 0,
+      "unique": 111,
+      "securityScore": 93,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "joao.silva@paulistano.org.br",
+      "name": "Jo\u00e3o Diego da Silva",
+      "weak": 1,
+      "fair": 0,
+      "medium": 39,
+      "strong": 4,
+      "reused": 42,
+      "unique": 2,
+      "securityScore": 53,
+      "twoFactorChannel": "On"
+    },
+    {
+      "email": "rubens.junior@paulistano.org.br",
+      "name": "Rubens Alves Junior",
+      "weak": 0,
+      "fair": 0,
+      "medium": 0,
+      "strong": 0,
+      "reused": 0,
+      "unique": 0,
+      "securityScore": 50,
+      "twoFactorChannel": "On"
+    }
+  ]
+}

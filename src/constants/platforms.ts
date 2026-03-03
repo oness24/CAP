@@ -11,10 +11,6 @@ import {
   BookOpen,
   Users,
   CheckSquare,
-  ArrowLeftRight,
-  UserX,
-  Activity,
-  TrendingUp,
   Scan,
   Target,
   Wrench,
@@ -30,7 +26,6 @@ import {
 import {
   CrowdStrikeLogo,
   WazuhLogo,
-  SafeticaLogo,
   Outpost24Logo,
   KeeperLogo,
   ZabbixLogo,
@@ -53,8 +48,8 @@ export const PLATFORM_REGISTRY: Record<PlatformId, PlatformConfig> = {
     nav: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/crowdstrike/dashboard', badge: { text: 'Live', variant: 'green' } },
       { id: 'endpoints', label: 'Endpoints', icon: Monitor, path: '/crowdstrike/endpoints' },
-      { id: 'detections', label: 'Detections', icon: ShieldAlert, path: '/crowdstrike/detections', badge: { text: '3', variant: 'orange' } },
-      { id: 'incidents', label: 'Incidents', icon: AlertTriangle, path: '/crowdstrike/incidents', badge: { text: '2', variant: 'red' } },
+      { id: 'detections', label: 'Detections', icon: ShieldAlert, path: '/crowdstrike/detections' },
+      { id: 'incidents', label: 'Incidents', icon: AlertTriangle, path: '/crowdstrike/incidents' },
       { id: 'vulnerabilities', label: 'Vulnerabilities', icon: Bug, path: '/crowdstrike/vulnerabilities' },
       { id: 'policies', label: 'Policies', icon: FileText, path: '/crowdstrike/policies' },
       { id: 'reports', label: 'Reports', icon: BarChart2, path: '/crowdstrike/reports' },
@@ -81,28 +76,6 @@ export const PLATFORM_REGISTRY: Record<PlatformId, PlatformConfig> = {
       { id: 'agents', label: 'Agents', icon: Users, path: '/wazuh/agents' },
       { id: 'compliance', label: 'Compliance', icon: CheckSquare, path: '/wazuh/compliance' },
       { id: 'reports', label: 'Reports', icon: BarChart2, path: '/wazuh/reports' },
-    ],
-  },
-
-  safetica: {
-    id: 'safetica',
-    name: 'Safetica',
-    category: 'Data Loss Prevention',
-    Logo: SafeticaLogo,
-    colors: {
-      primary: '#0D9488',
-      secondary: '#14B8A6',
-      glow: 'rgba(13, 148, 136, 0.25)',
-      gradient: 'linear-gradient(135deg, #0D9488 0%, #064E3B 100%)',
-    },
-    defaultRoute: '/safetica/dashboard',
-    nav: [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/safetica/dashboard', badge: { text: 'Live', variant: 'green' } },
-      { id: 'data-transfers', label: 'Data Transfers', icon: ArrowLeftRight, path: '/safetica/data-transfers' },
-      { id: 'policy-violations', label: 'Policy Violations', icon: UserX, path: '/safetica/policy-violations', badge: { text: '7', variant: 'red' } },
-      { id: 'user-activity', label: 'User Activity', icon: Activity, path: '/safetica/user-activity' },
-      { id: 'risk-analytics', label: 'Risk Analytics', icon: TrendingUp, path: '/safetica/risk-analytics' },
-      { id: 'reports', label: 'Reports', icon: BarChart2, path: '/safetica/reports' },
     ],
   },
 
@@ -142,7 +115,7 @@ export const PLATFORM_REGISTRY: Record<PlatformId, PlatformConfig> = {
     defaultRoute: '/keeper/dashboard',
     nav: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/keeper/dashboard', badge: { text: 'Live', variant: 'green' } },
-      { id: 'weak-passwords', label: 'Weak Passwords', icon: Lock, path: '/keeper/weak-passwords', badge: { text: '9', variant: 'red' } },
+      { id: 'weak-passwords', label: 'Weak Passwords', icon: Lock, path: '/keeper/weak-passwords', badge: { text: '20', variant: 'red' } },
       { id: 'security-score', label: 'Security Score', icon: Star, path: '/keeper/security-score' },
       { id: 'user-audit', label: 'User Audit', icon: Users, path: '/keeper/user-audit' },
       { id: 'policy-compliance', label: 'Policy Compliance', icon: ClipboardList, path: '/keeper/policy-compliance' },

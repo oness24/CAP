@@ -16,6 +16,7 @@ function severityColor(s: string): string {
 
 function statusColor(s: string): string {
   if (s === 'Active')    return '#EF4444'
+  if (s === 'New')       return '#EF4444'
   if (s === 'Patched')   return '#22C55E'
   if (s === 'Mitigated') return '#F97316'
   if (s === 'Accepted')  return '#3B82F6'
@@ -24,9 +25,24 @@ function statusColor(s: string): string {
 
 type CVERow = typeof outpost24Dashboard.cves[number]
 
+const emptyCveKpis = {
+  totalCVEs: { value: 0, trend: 0, label: 'Total CVEs Tracked' },
+  criticalCVEs2: { value: 0, trend: 0, label: 'Critical CVEs' },
+  patchedCVEs: { value: 0, trend: 0, label: 'CVEs Patched (30d)' },
+  affectedAssets: { value: 0, trend: 0, label: 'Affected Assets' },
+}
+
 export default function CVEAnalysis() {
   const { data: apiData, isLoading, error } = useDashboard('outpost24')
-  const d = (apiData as typeof outpost24Dashboard) ?? outpost24Dashboard
+  const raw = apiData as Record<string, unknown> | null
+  const isLive = raw?._live === true
+  const d = isLive ? (raw as typeof outpost24Dashboard) : null
+
+  // Defensive: show only live data (or empty state) to avoid mock products
+  const cveKpis = d?.cveKpis ?? emptyCveKpis
+  const cves = Array.isArray(d?.cves) ? d.cves : []
+  const severityPie = Array.isArray(d?.severityPie) ? d.severityPie : []
+  const topAffectedProducts = Array.isArray(d?.topAffectedProducts) ? d.topAffectedProducts : []
 
   return (
     <PageLayout
@@ -39,17 +55,28 @@ export default function CVEAnalysis() {
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Loading live data…</span>
         </div>
       )}
-      {error && !isLoading && (
-        <div className="rounded-lg px-4 py-2 text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}>
-          ⚠ Failed to fetch live data — showing fallback. {error}
+      {!isLoading && (
+        <div className="flex items-center gap-3">
+          {isLive ? (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.25)', color: '#22C55E' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22C55E' }} /> Live
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: 'rgba(234,88,12,0.1)', border: '1px solid rgba(234,88,12,0.25)', color: '#F97316' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#F97316' }} /> Mock
+            </span>
+          )}
+          {error && (
+            <span className="text-xs" style={{ color: '#F87171' }}>⚠ {error}</span>
+          )}
         </div>
       )}
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title={d.cveKpis.totalCVEs.label}      value={d.cveKpis.totalCVEs.value}      trend={d.cveKpis.totalCVEs.trend}      icon={Bug} />
-        <MetricCard title={d.cveKpis.criticalCVEs2.label}  value={d.cveKpis.criticalCVEs2.value}  trend={d.cveKpis.criticalCVEs2.trend}  icon={AlertTriangle} />
-        <MetricCard title={d.cveKpis.patchedCVEs.label}    value={d.cveKpis.patchedCVEs.value}    trend={d.cveKpis.patchedCVEs.trend}    icon={ShieldCheck} />
-        <MetricCard title={d.cveKpis.affectedAssets.label} value={d.cveKpis.affectedAssets.value} trend={d.cveKpis.affectedAssets.trend} icon={Server} />
+        <MetricCard title={cveKpis.totalCVEs?.label ?? 'Total CVEs'}       value={cveKpis.totalCVEs?.value ?? 0}      trend={cveKpis.totalCVEs?.trend ?? 0}      icon={Bug} />
+        <MetricCard title={cveKpis.criticalCVEs2?.label ?? 'Critical CVEs'} value={cveKpis.criticalCVEs2?.value ?? 0}  trend={cveKpis.criticalCVEs2?.trend ?? 0}  icon={AlertTriangle} />
+        <MetricCard title={cveKpis.patchedCVEs?.label ?? 'CVEs Patched'}    value={cveKpis.patchedCVEs?.value ?? 0}    trend={cveKpis.patchedCVEs?.trend ?? 0}    icon={ShieldCheck} />
+        <MetricCard title={cveKpis.affectedAssets?.label ?? 'Affected Assets'} value={cveKpis.affectedAssets?.value ?? 0} trend={cveKpis.affectedAssets?.trend ?? 0} icon={Server} />
       </div>
 
       {/* Charts */}
@@ -57,13 +84,13 @@ export default function CVEAnalysis() {
         <PieChartWidget
           title="CVE Severity Distribution"
           subtitle="Total vulnerabilities by CVSS severity band"
-          data={d.severityPie}
+          data={severityPie}
           height={220}
         />
         <BarChartWidget
           title="Top Affected Products"
           subtitle="Products with highest number of impacted assets"
-          data={d.topAffectedProducts}
+          data={topAffectedProducts}
           dataKey="count"
           labelKey="label"
           layout="vertical"
@@ -75,6 +102,7 @@ export default function CVEAnalysis() {
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>CVE Database</h2>
         <DataTable<CVERow>
+          data={cves as CVERow[]}
           columns={[
             {
               key: 'cveId', label: 'CVE ID',
@@ -126,7 +154,6 @@ export default function CVEAnalysis() {
               ),
             },
           ]}
-          data={d.cves}
         />
       </div>
     </PageLayout>
