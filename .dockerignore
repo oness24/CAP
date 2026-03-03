@@ -1,0 +1,16 @@
+# --- root .dockerignore (for frontend build) ---
+node_modules
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+*.db
+*.sqlite3
+backend/.env
+backend/__pycache__
+backend/app/__pycache__
+backend/tests
+tmp_*
+dist
+*.log

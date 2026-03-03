@@ -1,0 +1,10 @@
+# --- backend .dockerignore ---
+__pycache__
+*.pyc
+.venv
+*.db
+*.sqlite3
+tests
+.env.example
+tmp_*
+*.log

@@ -1,0 +1,57 @@
+# =============================================================
+#  CAP_DASH  —  Docker Compose  (production)
+# =============================================================
+#  Ports exposed on the HOST:
+#    80  → frontend (Nginx serves SPA + reverse-proxies /api)
+#
+#  To run alongside OTHER apps on this VM, change the host port
+#  in the "ports" section (e.g. 8080:80) and point your shared
+#  reverse-proxy to that port.
+# =============================================================
+
+services:
+  # ---------- Backend (FastAPI + Uvicorn) ----------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: capdash-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - CORS_ORIGINS=http://localhost,http://127.0.0.1,https://relatorios.contego.com.br
+    volumes:
+      # Persist the SQLite database across rebuilds
+      - capdash-db:/app
+    networks:
+      - capdash-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/', timeout=5).raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ---------- Frontend (Nginx + React SPA) ----------
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+        VITE_OPENAI_API_KEY: ${VITE_OPENAI_API_KEY:-}
+    container_name: capdash-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - capdash-net
+
+volumes:
+  capdash-db:
+
+networks:
+  capdash-net:
+    driver: bridge
